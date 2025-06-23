@@ -1,10 +1,20 @@
 # YT Batch Manager
 
+![YT Batch Manager](./docs/screenshot.png)
+
 As both YouTube studio webpage and YT studio mobile app does not provide a convinient user experiences for batch editing video titles and descriptions, I had to make this app to manage titles and descriptions of my videos in a single place.
 
 This is an Electron port, as a standalone app, of [yt-batch-manager-py](https://github.com/hletrd/yt-batch-manager-py).
 
+---
+
+유튜브 채널의 영상 제목과 설명을 한 페이지에서 바로 수정하고 관리할 수 있는 앱입니다.
+
+유튜브 채널에서 영상 제목과 설명을 한 번에 수정할 때 각 영상에 하나하나 들어가서 확인하고 수정해야 하는 게 너무 킹받아서 만들었습니다. 웹 페이지든 YT Studio 모바일 앱이든 왜 영상 제목과 설명을 한 번에 나열해서 수정할 수 있는 기능이 없는건지 모르겠습니다. 원래 [Python으로 만들었다가](https://github.com/hletrd/yt-batch-manager-py) 별도 데스크탑 앱이 편할 것 같아 Electron으로 다시 만들었습니다.
+
 * Disclaimer: YouTube is a registered trademark of Google LLC, and this project is not affiliated with YouTube in any way.
+
+---
 
 ## Features
 
@@ -23,6 +33,19 @@ This is an Electron port, as a standalone app, of [yt-batch-manager-py](https://
 - Click "Update Video" to update the videos.
 - Click "Save to File" to save the video data to a local JSON file.
 - Click "Load from File" to restore the video data from a local JSON file.
+
+## 사용방법 (한국어)
+
+- [Releases](https://github.com/hletrd/yt-batch-manager/releases) 페이지에서 앱을 다운로드합니다. macOS (x86_64 / arm64), Windows (x86_64, arm64)를 지원합니다.
+- [Google Cloud Console](https://console.cloud.google.com/)에서 새 프로젝트를 생성합니다. 상단 검색창에 **YouTube Data API v3**를 검색하여 페이지에 들어가고 '사용' 버튼을 클릭해 활성화합니다.
+- 상단 검색창에 **OAuth 동의 화면**을 검색하여 페이지에 들어갑니다. 좌측 메뉴에서 '클라이언트'를 선택합니다. '클라이언트 만들기'를 클릭하고, 애플리케이션 유형을 '데스크톱 앱'으로 설정합니다. 클라이언트를 생성하고 'JSON 다운로드'를 클릭해 키 파일을 다운로드합니다. JSON은 페이지를 닫으면 다시 다운로드할 수 없으니 주의합니다. 다운로드한 JSON 파일의 이름을 `credentials.json`으로 변경하고 YT Batch Manager 실행 파일과 같은 위치에 넣습니다.
+- 같은 페이지의 좌측 메뉴에서 '데이터 액세스'를 선택하고, '범위 추가 또는 삭제'를 클릭합니다. '직접 범위 추가'에 다음 내용을 입력하고 '테이블에 추가'를 클릭한 뒤 업데이트합니다.
+```
+https://www.googleapis.com/auth/youtube
+https://www.googleapis.com/auth/youtube.force-ssl
+```
+- 좌측 메뉴에서 '대상'을 클릭하고, '테스트 사용자' 항목에 본인의 Gmail 계정을 추가합니다.
+- 다운로드한 앱을 실행합니다.
 
 ---
 
@@ -58,6 +81,7 @@ $ npm install
 2. Click 'Add or remove scopes' and enter following scopes in **Manually add scopes** text box:
 ```
 https://www.googleapis.com/auth/youtube
+https://www.googleapis.com/auth/youtube.force-ssl
 ```
 3. Click 'Add to table'.
 4. Click 'Update'.
