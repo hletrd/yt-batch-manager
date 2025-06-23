@@ -84,6 +84,45 @@ class YouTubeBatchManager {
     }
   }
 
+  private showCredentialsError(errorMessage: string, credentialsPath?: string): void {
+    const videoList = document.getElementById('video-list');
+    if (!videoList) return;
+
+    const pathInfo = credentialsPath ? `<p><strong>Expected location:</strong><br><code>${credentialsPath}</code></p>` : '';
+
+    videoList.innerHTML = `
+      <div class="credentials-error">
+        <div class="error-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h3>Credentials Required</h3>
+        <p>${errorMessage.replace(/\n/g, '<br>')}</p>
+        ${pathInfo}
+        <div class="credentials-help">
+          <h4>Setup Instructions:</h4>
+          <ol>
+                         <li>Go to <a href="#" onclick="window.youtubeAPI.openExternal?.('https://console.cloud.google.com/') || alert('Please visit: https://console.cloud.google.com/')">Google Cloud Console</a></li>
+            <li>Create a new project or select an existing one</li>
+            <li>Enable the YouTube Data API v3</li>
+            <li>Create OAuth 2.0 credentials for a desktop application</li>
+            <li>Download the credentials JSON file</li>
+            <li>Rename it to <code>credentials.json</code> and place it in the app directory</li>
+            <li>Restart the application</li>
+          </ol>
+        </div>
+        <div class="credentials-actions">
+          <button class="btn btn-primary" onclick="window.youtubeAPI.checkCredentials().then(result => { if (result.success) { location.reload(); } else { app.showStatus(result.error || 'Still no valid credentials found', 'error'); } })">
+            Check Again
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   private markChanged(videoId: string): void {
     this.state.changedVideos.add(videoId);
     const updateBtn = document.getElementById(`update-btn-${videoId}`);
@@ -268,8 +307,8 @@ class YouTubeBatchManager {
 
     try {
       const authResult = await window.youtubeAPI.authenticate();
-      if (!authResult) {
-        this.showStatus('Authentication failed', 'error');
+      if (!authResult.success) {
+        this.showStatus(authResult.error || 'Authentication failed', 'error');
         return;
       }
 
@@ -609,6 +648,13 @@ class YouTubeBatchManager {
 
   private async initializeApp(): Promise<void> {
     try {
+      // Check credentials first
+      const credentialsCheck = await window.youtubeAPI.checkCredentials();
+      if (!credentialsCheck.success) {
+        this.showCredentialsError(credentialsCheck.error!, credentialsCheck.path);
+        return;
+      }
+
       const result = await window.youtubeAPI.getVideos();
       if (result.videos && result.videos.length > 0) {
         this.state.allVideos = result.videos;

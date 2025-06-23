@@ -12,32 +12,48 @@ This is an Electron port, as a standalone app, of [yt-batch-manager-py](https://
   - YouTube forces a very user-unfriendly experiences, where you have to go to each video page to edit the title and description, and then save it.
 - Save/load video data to/from local JSON files.
 
-## Prerequisites (for development)
+## Using the app
+
+- Download the prebuilt app from [Releases](https://github.com/hletrd/yt-batch-manager/releases).
+- Follow the [Google API setup](#google-api-setup) section to get the `credentials.json` file.
+- Run the app.
+- Complete Google OAuth authentication in your browser.
+- Click "Load from YouTube" to fetch your videos.
+- Edit the titles and descriptions of the videos.
+- Click "Update Video" to update the videos.
+- Click "Save to File" to save the video data to a local JSON file.
+- Click "Load from File" to restore the video data from a local JSON file.
+
+---
+
+## Guide for developers
+
+### Prerequisites
 
 - Node.js 22.0.0+ installed.
 - Google Cloud Console project with YouTube Data API v3 enabled.
 - Your own YouTube channel.
 
-## Setup (for development)
+### Setup
 
-### 1. Install dependencies
+#### Install dependencies
 
 ```bash
 $ npm install
 ```
 
-### 2. Google API setup
+#### Google API setup
 
-#### 2.1. Create a new project
+##### Create a new project
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project, name it whatever you want.
 3. Search for the **YouTube Data API v3** in the search bar, and enable it.
 4. Search for the **OAuth consent screen** in the search bar, and click 'Clients' on the left sidebar.
 5. Create a new client app as a desktop app, name it whatever you want.
 6. Download the credentials JSON file.
-7. Rename the file to `credentials.json` and move it to the root of the project.
+7. Rename the file to `credentials.json` and move it to the root of the project. (Or the same directory as the app)
 
-#### 2.2. Add scopes
+##### Add scopes
 1. Search for the **OAuth consent screen** in the search bar, and click 'Data Access' on the left sidebar.
 2. Click 'Add or remove scopes' and enter following scopes in **Manually add scopes** text box:
 ```
@@ -47,11 +63,11 @@ https://www.googleapis.com/auth/youtube
 4. Click 'Update'.
 5. Click 'Save'.
 
-#### 2.3. Add yourself as a test user
+##### Add yourself as a test user
 1. Search for the **OAuth consent screen** in the search bar, and click 'Audience' on the left sidebar.
 2. Click 'Add user' under 'Test users' and enter your email address.
 
-### 3. Run the application (for development)
+#### Run the application (for development)
 
 ```bash
 npm run dev

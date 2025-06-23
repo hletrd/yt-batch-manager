@@ -58,8 +58,23 @@ interface StoreSchema {
 
 const SCOPES = ['https://www.googleapis.com/auth/youtube'];
 const CACHE_DIR = path.join(__dirname, '../cache/thumbnails');
-const CREDENTIALS_PATH = 'credentials.json';
-const TOKEN_PATH = 'token.json';
+
+
+const getCredentialsPath = (): string => {
+  if (app.isPackaged) {
+    return path.join(path.dirname(app.getPath('exe')), '../../../', 'credentials.json');
+  } else {
+    return path.join(__dirname, '..', 'credentials.json');
+  }
+};
+
+const getTokenPath = (): string => {
+  if (app.isPackaged) {
+    return path.join(path.dirname(app.getPath('exe')), '../../../', 'token.json');
+  } else {
+    return path.join(__dirname, '..', 'token.json');
+  }
+};
 
 const store = new Store<StoreSchema>() as any;
 
@@ -82,21 +97,74 @@ class YouTubeManager {
     }
   }
 
-  async authenticate(): Promise<boolean> {
+  checkCredentials(): { success: boolean; error?: string; path?: string } {
+    const credentialsPath = getCredentialsPath();
+
+    if (!fsSync.existsSync(credentialsPath)) {
+      return {
+        success: false,
+        error: `credentials.json not found at: ${credentialsPath}\nPlease download it from Google Cloud Console and place it in the same directory as the app.`,
+        path: credentialsPath
+      };
+    }
+
     try {
-      if (!fsSync.existsSync(CREDENTIALS_PATH)) {
-        throw new Error('credentials.json not found. Please download it from Google Cloud Console.');
+      const credentialsContent = fsSync.readFileSync(credentialsPath, 'utf-8');
+      const credentials = JSON.parse(credentialsContent);
+
+      if (!credentials.installed || !credentials.installed.client_secret || !credentials.installed.client_id || !credentials.installed.redirect_uris) {
+        return {
+          success: false,
+          error: 'credentials.json is missing required fields. Please ensure you downloaded the correct OAuth 2.0 client credentials for a desktop application.',
+          path: credentialsPath
+        };
       }
 
-      const credentialsContent = await fs.readFile(CREDENTIALS_PATH, 'utf-8');
-      const credentials = JSON.parse(credentialsContent);
+      return { success: true, path: credentialsPath };
+    } catch (parseError) {
+      return {
+        success: false,
+        error: 'credentials.json is invalid or corrupted. Please download a new copy from Google Cloud Console.',
+        path: credentialsPath
+      };
+    }
+  }
+
+  async authenticate(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const credentialsPath = getCredentialsPath();
+      if (!fsSync.existsSync(credentialsPath)) {
+        return {
+          success: false,
+          error: `credentials.json not found at: ${credentialsPath}\nPlease download it from Google Cloud Console and place it in the same directory as the app.`
+        };
+      }
+
+      let credentials;
+      try {
+        const credentialsContent = await fs.readFile(credentialsPath, 'utf-8');
+        credentials = JSON.parse(credentialsContent);
+      } catch (parseError) {
+        return {
+          success: false,
+          error: 'credentials.json is invalid or corrupted. Please download a new copy from Google Cloud Console.'
+        };
+      }
+
+      if (!credentials.installed || !credentials.installed.client_secret || !credentials.installed.client_id || !credentials.installed.redirect_uris) {
+        return {
+          success: false,
+          error: 'credentials.json is missing required fields. Please ensure you downloaded the correct OAuth 2.0 client credentials for a desktop application.'
+        };
+      }
+
       const { client_secret, client_id, redirect_uris } = credentials.installed;
 
       this.oauth2Client = new OAuth2Client(client_id, client_secret, redirect_uris[0]);
 
       let tokens = null;
-      if (fsSync.existsSync(TOKEN_PATH)) {
-        const tokenContent = await fs.readFile(TOKEN_PATH, 'utf-8');
+      if (fsSync.existsSync(getTokenPath())) {
+        const tokenContent = await fs.readFile(getTokenPath(), 'utf-8');
         tokens = JSON.parse(tokenContent);
         this.oauth2Client.setCredentials(tokens);
       }
@@ -115,7 +183,7 @@ class YouTubeManager {
               const { credentials } = await this.oauth2Client.refreshAccessToken();
               tokens = credentials;
               this.oauth2Client.setCredentials(tokens);
-              await fs.writeFile(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+              await fs.writeFile(getTokenPath(), JSON.stringify(tokens, null, 2));
             } catch (refreshError) {
               tokens = await this.getNewToken();
             }
@@ -126,10 +194,13 @@ class YouTubeManager {
       }
 
       this.youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Authentication failed:', error);
-      return false;
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown authentication error occurred.'
+      };
     }
   }
 
@@ -151,7 +222,7 @@ class YouTubeManager {
     const tokens = await this.startCallbackServer(port, authUrl);
     this.oauth2Client.setCredentials(tokens);
 
-    await fs.writeFile(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+    await fs.writeFile(getTokenPath(), JSON.stringify(tokens, null, 2));
 
     return tokens;
   }
@@ -489,9 +560,7 @@ class ElectronApp {
     });
 
     app.on('window-all-closed', () => {
-      if (process.platform !== 'darwin') {
-        app.quit();
-      }
+      app.quit();
     });
 
     app.on('activate', () => {
@@ -763,6 +832,10 @@ class ElectronApp {
     ipcMain.handle('youtube:get-channel-info', async () => {
       const channelInfo = await this.youtubeManager.getChannelInfo();
       return { channelInfo };
+    });
+
+    ipcMain.handle('youtube:check-credentials', async () => {
+      return this.youtubeManager.checkCredentials();
     });
 
     ipcMain.handle('youtube:get-videos', async () => {

@@ -1,7 +1,7 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, shell } from 'electron';
 
 interface YouTubeAPI {
-  authenticate: () => Promise<boolean>;
+  authenticate: () => Promise<{ success: boolean; error?: string }>;
   loadVideos: () => Promise<any>;
   updateVideo: (data: { video_id: string; title: string; description: string }) => Promise<any>;
   updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string }> }) => Promise<any>;
@@ -12,6 +12,8 @@ interface YouTubeAPI {
   getThumbnail: (filename: string) => Promise<any>;
   getChannelInfo: () => Promise<any>;
   getVideos: () => Promise<any>;
+  checkCredentials: () => Promise<{ success: boolean; error?: string; path?: string }>;
+  openExternal: (url: string) => Promise<void>;
 }
 
 const youtubeAPI: YouTubeAPI = {
@@ -26,6 +28,8 @@ const youtubeAPI: YouTubeAPI = {
   getThumbnail: (filename) => ipcRenderer.invoke('youtube:get-thumbnail', filename),
   getChannelInfo: () => ipcRenderer.invoke('youtube:get-channel-info'),
   getVideos: () => ipcRenderer.invoke('youtube:get-videos'),
+  checkCredentials: () => ipcRenderer.invoke('youtube:check-credentials'),
+  openExternal: (url) => shell.openExternal(url),
 };
 
 contextBridge.exposeInMainWorld('youtubeAPI', youtubeAPI);

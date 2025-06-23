@@ -697,6 +697,99 @@
         padding: 16px;
       }
     }
+
+    .credentials-error {
+      text-align: center;
+      padding: 60px 40px;
+      max-width: 800px;
+      margin: 40px auto;
+      background: var(--bg-primary);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .credentials-error .error-icon {
+      color: var(--accent-danger);
+      margin-bottom: 24px;
+    }
+
+    .credentials-error h3 {
+      color: var(--text-primary);
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .credentials-error p {
+      color: var(--text-secondary);
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .credentials-error code {
+      background: var(--bg-tertiary);
+      color: var(--accent-primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+      font-size: 14px;
+      word-break: break-all;
+    }
+
+    .credentials-help {
+      text-align: left;
+      background: var(--bg-secondary);
+      padding: 24px;
+      border-radius: 8px;
+      margin: 24px 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .credentials-help h4 {
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .credentials-help ol {
+      color: var(--text-secondary);
+      padding-left: 20px;
+      line-height: 1.6;
+    }
+
+    .credentials-help li {
+      margin-bottom: 8px;
+    }
+
+    .credentials-help a {
+      color: var(--accent-primary);
+      text-decoration: none;
+    }
+
+    .credentials-help a:hover {
+      text-decoration: underline;
+    }
+
+    .credentials-actions {
+      margin-top: 32px;
+    }
+
+    .credentials-actions .btn {
+      min-width: 140px;
+    }
+
+    @media (max-width: 768px) {
+      .credentials-error {
+        padding: 40px 24px;
+        margin: 20px;
+      }
+
+      .credentials-help {
+        padding: 20px;
+      }
+    }
   </style>
 </head>
 <body>
