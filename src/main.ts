@@ -60,9 +60,24 @@ const SCOPES = ['https://www.googleapis.com/auth/youtube'];
 const CACHE_DIR = path.join(__dirname, '../cache/thumbnails');
 
 
+const getPortableExecutableDir = (): string => {
+  if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    return process.env.PORTABLE_EXECUTABLE_DIR;
+  }
+  if (process.env.PORTABLE_EXECUTABLE_FILE) {
+    return path.dirname(process.env.PORTABLE_EXECUTABLE_FILE);
+  }
+  return process.cwd();
+};
+
 const getCredentialsPath = (): string => {
   if (app.isPackaged) {
-    return path.join(path.dirname(app.getPath('exe')), '../../../', 'credentials.json');
+    if (process.platform === 'darwin') {
+      return path.join(path.dirname(app.getPath('exe')), '../../../', 'credentials.json');
+    } else {
+      const portableDir = getPortableExecutableDir();
+      return path.join(portableDir, 'credentials.json');
+    }
   } else {
     return path.join(__dirname, '..', 'credentials.json');
   }
@@ -70,7 +85,12 @@ const getCredentialsPath = (): string => {
 
 const getTokenPath = (): string => {
   if (app.isPackaged) {
-    return path.join(path.dirname(app.getPath('exe')), '../../../', 'token.json');
+    if (process.platform === 'darwin') {
+      return path.join(path.dirname(app.getPath('exe')), '../../../', 'token.json');
+    } else {
+      const portableDir = getPortableExecutableDir();
+      return path.join(portableDir, 'token.json');
+    }
   } else {
     return path.join(__dirname, '..', 'token.json');
   }
