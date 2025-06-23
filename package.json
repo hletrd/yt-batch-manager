@@ -70,12 +70,7 @@
         }
       ],
       "icon": "assets/icon.png",
-      "artifactName": "${productName}-${version}-${arch}-portable.${ext}",
-      "portable": {
-        "requestExecutionLevel": "asInvoker",
-        "unpackDirName": "${productName}",
-        "splashImage": null
-      }
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
     },
     "linux": {
       "target": [
