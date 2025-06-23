@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT Batch Manager</title>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #fafafa;
+      --bg-tertiary: #f5f5f5;
+      --text-primary: #1a1a1a;
+      --text-secondary: #737373;
+      --text-tertiary: #a3a3a3;
+      --border-color: #e5e5e5;
+      --accent-primary: #ff6b7a;
+      --accent-success: #ff6b7a;
+      --accent-warning: #ff6b7a;
+      --accent-danger: #ff6b7a;
+      --accent-youtube: #ff6b7a;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #171717;
+      --bg-tertiary: #262626;
+      --text-primary: #fafafa;
+      --text-secondary: #a3a3a3;
+      --text-tertiary: #737373;
+      --border-color: #262626;
+      --accent-primary: #ff6b7a;
+      --accent-success: #ff6b7a;
+      --accent-warning: #ff6b7a;
+      --accent-danger: #ff6b7a;
+      --accent-youtube: #ff6b7a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .header {
+      background: var(--bg-primary);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 2000;
+      padding: 16px 20px;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      z-index: 100;
+    }
+
+    .burger-menu {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+      padding: 8px;
+      border: none;
+      background: none;
+      gap: 4px;
+    }
+
+    .burger-line {
+      width: 24px;
+      height: 2px;
+      background: var(--text-primary);
+      transition: all 0.3s ease;
+      border-radius: 1px;
+    }
+
+    .header h1 {
+      color: var(--text-primary);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      color: var(--text-primary);
+      position: relative;
+      z-index: 100;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .theme-icon {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+      transition: all 0.3s ease;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      position: relative;
+      z-index: 10;
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-btn {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 0 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 34px;
+      box-sizing: border-box;
+      line-height: 1;
+    }
+
+    .dropdown-btn:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .dropdown-btn .sort-hint {
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: var(--bg-primary);
+      min-width: 180px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      z-index: 1001;
+      right: 0;
+      top: 100%;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .dropdown-content a {
+      color: var(--text-primary);
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      transition: background-color 0.3s ease;
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    .dropdown-content a:hover {
+      background-color: var(--bg-secondary);
+    }
+
+    .dropdown.show .dropdown-content {
+      display: block;
+    }
+
+    .btn {
+      padding: 0 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      letter-spacing: 0.1px;
+      height: 34px;
+      box-sizing: border-box;
+      line-height: 1;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+      border: 1px solid var(--accent-primary);
+    }
+
+    .btn-primary:hover {
+      background: #e55a68;
+      border-color: #e55a68;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent-primary);
+      border: 1px solid var(--accent-primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-success {
+      background: var(--bg-primary);
+      color: var(--accent-primary);
+      border: 1px solid var(--accent-primary);
+      box-shadow: 0 1px 3px rgba(255, 107, 122, 0.1);
+    }
+
+    .btn-success:hover {
+      background: var(--accent-primary);
+      color: white;
+      box-shadow: 0 2px 6px rgba(255, 107, 122, 0.2);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, var(--accent-primary), #ff8a95);
+      color: white;
+      border: 1px solid var(--accent-primary);
+      font-weight: 600;
+    }
+
+    .btn-warning:hover {
+      background: linear-gradient(135deg, #e55a68, #e5687a);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .main-content {
+      margin-top: 88px;
+      padding: 24px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .video-list {
+      display: grid;
+      gap: 24px;
+    }
+
+    .video-item {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px 24px 0px 24px;
+      transition: border-color 0.3s ease;
+    }
+
+    .video-item:hover {
+      border-color: var(--accent-primary);
+    }
+
+    .video-header {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .video-thumbnail {
+      flex-shrink: 0;
+    }
+
+    .video-thumbnail img {
+      width: 320px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .video-info {
+      flex-grow: 1;
+      min-width: 0;
+    }
+
+    .video-id-link {
+      display: inline-block;
+      background: var(--bg-secondary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .video-id-link:hover {
+      background: var(--bg-tertiary);
+      color: var(--accent-primary);
+    }
+
+    .video-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .video-published {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .privacy-status {
+      margin-left: 8px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .video-item .form-group:last-of-type {
+      margin-bottom: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 14px;
+      letter-spacing: 0.2px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+      font-family: inherit;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    .form-control.title-input {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .title-counter {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      text-align: right;
+      font-weight: 500;
+      margin-bottom: -28px;
+    }
+
+    .title-counter.warning {
+      color: var(--accent-danger);
+      font-weight: 600;
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 140px;
+      overflow: hidden;
+      line-height: 1.5;
+    }
+
+    .video-actions {
+      margin-top: 0px;
+      margin-bottom: 0px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .video-actions:has(button:not([style*="display: none"])) {
+      margin-top: -4px;
+      margin-bottom: 24px;
+    }
+
+    .status-message {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      z-index: 1001;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.3s ease;
+      letter-spacing: 0.2px;
+    }
+
+    .status-message.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .status-success {
+      background: var(--accent-success);
+    }
+
+    .status-error {
+      background: var(--accent-danger);
+    }
+
+    .status-info {
+      background: var(--accent-primary);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-secondary);
+    }
+
+    .no-videos {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-secondary);
+    }
+
+    .no-videos h3 {
+      margin-bottom: 12px;
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 24px;
+    }
+
+    .no-videos p {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    @media (max-width: 1100px) {
+      .header h1 {
+        font-size: 18px;
+      }
+
+      .header-buttons {
+        gap: 8px;
+      }
+
+      .theme-icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      .dropdown-btn {
+        font-size: 10px;
+        padding: 0 8px;
+      }
+
+      .btn {
+        font-size: 10px;
+        padding: 0 8px;
+      }
+
+      .header-right {
+        gap: 8px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 12px 16px;
+      }
+
+      .header-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .header-left {
+        gap: 12px;
+      }
+
+      .header h1 {
+        font-size: 20px;
+        margin: 0;
+        flex-grow: 1;
+      }
+
+      .burger-menu {
+        display: flex;
+      }
+
+      .theme-toggle {
+        width: 34px;
+        height: 34px;
+      }
+
+      .theme-icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      .header-buttons {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-primary);
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 10;
+      }
+
+      .header-buttons.show {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .dropdown {
+        width: 100%;
+      }
+
+      .dropdown-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 16px;
+        font-size: 14px;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .main-content {
+        margin-top: 88px;
+        padding: 16px;
+      }
+
+      .video-header {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .video-thumbnail img {
+        width: 100%;
+        height: auto;
+        max-height: 400px;
+        object-fit: contain;
+        background: var(--bg-secondary);
+      }
+
+      .video-actions {
+        flex-direction: column;
+      }
+
+      .video-item {
+        padding: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header {
+        padding: 10px 14px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+      }
+
+      .dropdown-btn, .btn {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      .main-content {
+        margin-top: 88px;
+        padding: 14px;
+      }
+
+      .video-item {
+        padding: 16px;
+      }
+    }
+
+
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <button class="burger-menu" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+          <div class="burger-line"></div>
+          <div class="burger-line"></div>
+          <div class="burger-line"></div>
+        </button>
+        <h1>YT Batch Manager</h1>
+      </div>
+      <div class="header-right">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg id="theme-icon" class="theme-icon" viewBox="-4 -4 32 32" fill="none">
+            <path id="theme-icon-path" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <div class="header-buttons" id="mobile-menu">
+          <div class="dropdown">
+            <button class="dropdown-btn" onclick="toggleDropdown()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"/>
+                <path d="M7 12h10"/>
+                <path d="M10 18h4"/>
+              </svg>
+              <span class="sort-hint">Sort by</span> <span id="current-sort">Date (Newest)</span> ▼
+            </button>
+            <div class="dropdown-content">
+              <a href="#" onclick="sortVideos('date-desc')">Date (Newest First)</a>
+              <a href="#" onclick="sortVideos('date-asc')">Date (Oldest First)</a>
+              <a href="#" onclick="sortVideos('title-asc')">Title (A-Z)</a>
+              <a href="#" onclick="sortVideos('title-desc')">Title (Z-A)</a>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="loadVideos()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5,3 19,12 5,21"/>
+            </svg>
+            Load from YouTube
+          </button>
+          <button class="btn btn-secondary" onclick="loadFromFile()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10,9 9,9 8,9"/>
+            </svg>
+            Load from JSON
+          </button>
+          <button class="btn btn-success" id="save-json-btn" onclick="downloadVideos()" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7,10 12,15 17,10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Save as JSON
+          </button>
+          <button class="btn btn-warning" id="save-all-btn" onclick="saveAllChanges()" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17,21 17,13 7,13 7,21"/>
+              <polyline points="7,3 7,8 15,8"/>
+            </svg>
+            Save All Changes (<span id="changes-count">0</span>)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div id="video-list" class="video-list">
+      {% if videos %}
+        {% for video in videos %}
+        <div class="video-item" data-video-id="{{ video.id }}">
+          <div class="video-header">
+            <div class="video-thumbnail">
+              {% if video.thumbnails %}
+              <img
+                src="{{ video.thumbnails.get('default', {}).get('url', video.thumbnail_url) }}"
+                srcset="
+                  {%- if video.thumbnails.get('default') -%}{{ video.thumbnails.default.url }} {{ video.thumbnails.default.width }}w{%- endif -%}
+                  {%- if video.thumbnails.get('medium') -%}{%- if video.thumbnails.get('default') -%}, {%- endif -%}{{ video.thumbnails.medium.url }} {{ video.thumbnails.medium.width }}w{%- endif -%}
+                  {%- if video.thumbnails.get('high') -%}{%- if video.thumbnails.get('medium') or video.thumbnails.get('default') -%}, {%- endif -%}{{ video.thumbnails.high.url }} {{ video.thumbnails.high.width }}w{%- endif -%}
+                  {%- if video.thumbnails.get('standard') -%}{%- if video.thumbnails.get('high') or video.thumbnails.get('medium') or video.thumbnails.get('default') -%}, {%- endif -%}{{ video.thumbnails.standard.url }} {{ video.thumbnails.standard.width }}w{%- endif -%}
+                  {%- if video.thumbnails.get('maxres') -%}{%- if video.thumbnails.get('standard') or video.thumbnails.get('high') or video.thumbnails.get('medium') or video.thumbnails.get('default') -%}, {%- endif -%}{{ video.thumbnails.maxres.url }} {{ video.thumbnails.maxres.width }}w{%- endif -%}"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1440px) 33vw, 320px"
+                alt="Thumbnail"
+                loading="lazy"
+                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K'">
+              {% else %}
+              <img src="{{ video.thumbnail_url }}" alt="Thumbnail" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K'">
+              {% endif %}
+            </div>
+            <div class="video-info">
+              <a href="https://www.youtube.com/watch?v={{ video.id }}" target="_blank" class="video-id-link">
+                https://youtu.be/watch?v={{ video.id }}
+              </a>
+              <div class="video-title">{{ video.title }}</div>
+              <div class="video-published">
+                Published {{ video.published_at[:10] }}
+                {% if video.privacy_status %}
+                  <span class="privacy-status">{{ video.privacy_status.title() }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="title-{{ video.id }}">Title</label>
+            <input type="text" class="form-control title-input" id="title-{{ video.id }}" value="{{ video.title }}" onchange="markChanged('{{ video.id }}')" oninput="updateTitleCounter('{{ video.id }}')">
+            <div class="title-counter" id="title-counter-{{ video.id }}">{{ video.title|length }}/100</div>
+          </div>
+
+          <div class="form-group">
+            <label for="description-{{ video.id }}">Description</label>
+            <textarea class="form-control" id="description-{{ video.id }}" onchange="markChanged('{{ video.id }}')" oninput="autoResizeTextarea(this)">{{ video.description }}</textarea>
+          </div>
+
+          <div class="video-actions">
+            <button class="btn btn-success" onclick="updateVideo('{{ video.id }}')" id="update-btn-{{ video.id }}" style="display: none;">
+              Update Video Info
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-videos">
+          <h3>No videos loaded</h3>
+          <p>Click "Load from YouTube" to fetch your videos, or "Load from File" to load a previous backup.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="status-message" class="status-message"></div>
+
+  <script>
+    let changedVideos = new Set();
+    let allVideos = [];
+    let displayedVideos = [];
+    let currentSort = 'date-desc';
+    let videosPerPage = 20;
+    let currentPage = 0;
+    let isLoading = false;
+
+    function initializeTheme() {
+      const savedTheme = localStorage.getItem('theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const currentTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+
+      updateThemeIcon(currentTheme);
+    }
+
+    function updateThemeIcon(theme) {
+      const iconPath = document.getElementById('theme-icon-path');
+      if (iconPath) {
+        if (theme === 'dark') {
+          iconPath.setAttribute('d', 'M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93');
+        } else {
+          iconPath.setAttribute('d', 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z');
+        }
+      }
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      updateThemeIcon(theme);
+      localStorage.setItem('theme', theme);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
+    }
+
+    function showStatus(message, type = 'info') {
+      const statusEl = document.getElementById('status-message');
+      statusEl.textContent = message;
+      statusEl.className = `status-message status-${type} show`;
+
+      setTimeout(() => {
+        statusEl.classList.remove('show');
+      }, 3000);
+    }
+
+    function markChanged(videoId) {
+      changedVideos.add(videoId);
+      const updateBtn = document.getElementById(`update-btn-${videoId}`);
+      if (updateBtn) {
+        updateBtn.style.display = 'inline-block';
+      }
+      updateSaveAllButton();
+    }
+
+    function updateSaveAllButton() {
+      const saveAllBtn = document.getElementById('save-all-btn');
+      const changesCount = document.getElementById('changes-count');
+
+      if (changedVideos.size > 0) {
+        saveAllBtn.style.display = 'inline-block';
+        changesCount.textContent = changedVideos.size;
+      } else {
+        saveAllBtn.style.display = 'none';
+      }
+    }
+
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.max(140, textarea.scrollHeight) + 'px';
+    }
+
+    function updateTitleCounter(videoId) {
+      const titleInput = document.getElementById(`title-${videoId}`);
+      const counter = document.getElementById(`title-counter-${videoId}`);
+
+      if (titleInput && counter) {
+        const length = titleInput.value.length;
+        counter.textContent = `${length}/100`;
+
+        if (length > 100) {
+          counter.classList.add('warning');
+        } else {
+          counter.classList.remove('warning');
+        }
+      }
+    }
+
+    function saveAllChanges() {
+      if (changedVideos.size === 0) return;
+
+      const saveAllBtn = document.getElementById('save-all-btn');
+      const originalText = saveAllBtn.innerHTML;
+
+      saveAllBtn.disabled = true;
+      saveAllBtn.innerHTML = 'Saving...';
+
+      const updates = Array.from(changedVideos).map(videoId => ({
+        video_id: videoId,
+        title: document.getElementById(`title-${videoId}`).value,
+        description: document.getElementById(`description-${videoId}`).value
+      }));
+
+      showStatus(`Saving ${updates.length} videos...`, 'info');
+
+      fetch('/api/update_videos_batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ updates: updates })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const successCount = data.results?.successful?.length || updates.length;
+            const failCount = data.results?.failed?.length || 0;
+
+            if (failCount > 0) {
+              showStatus(`${successCount} videos updated, ${failCount} failed`, 'info');
+            } else {
+              showStatus(`All ${successCount} videos updated successfully!`, 'success');
+            }
+
+            changedVideos.clear();
+            document.querySelectorAll('[id^="update-btn-"]').forEach(btn => {
+              btn.style.display = 'none';
+            });
+            updateSaveAllButton();
+          } else {
+            showStatus('Failed to update videos', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('Error updating videos', 'error');
+        })
+        .finally(() => {
+          saveAllBtn.disabled = false;
+          saveAllBtn.innerHTML = originalText;
+        });
+    }
+
+    function toggleMobileMenu() {
+      const mobileMenu = document.getElementById('mobile-menu');
+      const burgerMenu = document.querySelector('.burger-menu');
+
+      mobileMenu.classList.toggle('show');
+      burgerMenu.classList.toggle('active');
+    }
+
+    function toggleDropdown() {
+      const dropdown = document.querySelector('.dropdown');
+      dropdown.classList.toggle('show');
+    }
+
+    function sortVideos(sortType) {
+      currentSort = sortType;
+      const sortNames = {
+        'date-desc': 'Date (Newest)',
+        'date-asc': 'Date (Oldest)',
+        'title-asc': 'Title (A-Z)',
+        'title-desc': 'Title (Z-A)'
+      };
+
+      document.getElementById('current-sort').textContent = sortNames[sortType];
+      document.querySelector('.dropdown').classList.remove('show');
+
+      sortAllVideos();
+      currentPage = 0;
+      renderVideos(true);
+    }
+
+    function sortAllVideos() {
+      switch(currentSort) {
+        case 'date-desc':
+          allVideos.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+          break;
+        case 'date-asc':
+          allVideos.sort((a, b) => new Date(a.published_at) - new Date(b.published_at));
+          break;
+        case 'title-asc':
+          allVideos.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case 'title-desc':
+          allVideos.sort((a, b) => b.title.localeCompare(a.title));
+          break;
+      }
+    }
+
+    function loadVideos() {
+      showStatus('Loading videos from YouTube...', 'info');
+
+      fetch('/api/load_videos')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            allVideos = data.videos;
+            sortAllVideos();
+            currentPage = 0;
+            renderVideos(true);
+                        showStatus(`Loaded ${data.count} videos successfully!`, 'success');
+
+            const saveJsonBtn = document.getElementById('save-json-btn');
+            if (saveJsonBtn) {
+              saveJsonBtn.disabled = false;
+            }
+          } else {
+            showStatus('Failed to load videos', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('Error loading videos', 'error');
+        });
+    }
+
+    function saveVideos() {
+      showStatus('Saving videos to file...', 'info');
+
+      fetch('/api/save_videos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showStatus('Videos saved successfully!', 'success');
+          } else {
+            showStatus('Failed to save videos', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('Error saving videos', 'error');
+        });
+    }
+
+    function downloadVideos() {
+      showStatus('Preparing download...', 'info');
+
+      const link = document.createElement('a');
+      link.href = '/api/download_videos';
+      link.download = 'videos_backup.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showStatus('Download started!', 'success');
+    }
+
+    function loadFromFile() {
+      showStatus('Loading videos from file...', 'info');
+
+      fetch('/api/load_from_file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            allVideos = data.videos;
+            sortAllVideos();
+            currentPage = 0;
+            renderVideos(true);
+                        showStatus('Videos loaded from file successfully!', 'success');
+
+            const saveJsonBtn = document.getElementById('save-json-btn');
+            if (saveJsonBtn) {
+              saveJsonBtn.disabled = false;
+            }
+          } else {
+            showStatus(data.message || 'Failed to load videos from file', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('Error loading videos from file', 'error');
+        });
+    }
+
+    function updateVideo(videoId) {
+      const title = document.getElementById(`title-${videoId}`).value;
+      const description = document.getElementById(`description-${videoId}`).value;
+      const updateBtn = document.getElementById(`update-btn-${videoId}`);
+
+      updateBtn.disabled = true;
+      updateBtn.textContent = 'Updating...';
+
+      fetch('/api/update_video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          video_id: videoId,
+          title: title,
+          description: description
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showStatus('Video updated successfully!', 'success');
+            changedVideos.delete(videoId);
+            updateBtn.style.display = 'none';
+            updateSaveAllButton();
+          } else {
+            showStatus('Failed to update video', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('Error updating video', 'error');
+        })
+        .finally(() => {
+          updateBtn.disabled = false;
+          updateBtn.textContent = 'Update Video';
+        });
+    }
+
+    function renderVideos(clear = false) {
+      const videoList = document.getElementById('video-list');
+
+      if (clear) {
+        videoList.innerHTML = '';
+        displayedVideos = [];
+      }
+
+      const startIndex = currentPage * videosPerPage;
+      const endIndex = startIndex + videosPerPage;
+      const videosToAdd = allVideos.slice(startIndex, endIndex);
+
+      if (videosToAdd.length === 0) {
+        if (allVideos.length === 0) {
+          videoList.innerHTML = `
+            <div class="no-videos">
+              <h3>No videos loaded</h3>
+              <p>Click "Load from YouTube" to fetch your videos, or "Load from File" to load a previous backup.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      videosToAdd.forEach(video => {
+        const videoHTML = `
+          <div class="video-item" data-video-id="${video.id}">
+            <div class="video-header">
+              <div class="video-thumbnail">
+                ${video.thumbnails ? `
+                <img
+                  src="${video.thumbnails.default?.url || video.thumbnail_url}"
+                  srcset="${Object.entries(video.thumbnails).map(([size, thumb]) => `${thumb.url} ${thumb.width}w`).join(', ')}"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1440px) 33vw, 320px"
+                  alt="Thumbnail"
+                  loading="lazy"
+                  onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K'">` :
+                `<img src="${video.thumbnail_url}" alt="Thumbnail" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K'">`}
+              </div>
+              <div class="video-info">
+                <a href="https://www.youtube.com/watch?v=${video.id}" target="_blank" class="video-id-link">
+                  https://youtu.be/watch?v=${video.id}
+                </a>
+                <div class="video-title">${video.title}</div>
+                <div class="video-published">
+                  Published: ${video.published_at.substring(0, 10)}
+                  ${video.privacy_status ? `<span class="privacy-status">• ${video.privacy_status.charAt(0).toUpperCase() + video.privacy_status.slice(1)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="title-${video.id}">Title</label>
+              <input type="text" class="form-control title-input" id="title-${video.id}" value="${video.title.replace(/"/g, '&quot;')}" onchange="markChanged('${video.id}')" oninput="updateTitleCounter('${video.id}')">
+              <div class="title-counter" id="title-counter-${video.id}">${video.title.length}/100</div>
+            </div>
+
+            <div class="form-group">
+              <label for="description-${video.id}">Description</label>
+              <textarea class="form-control" id="description-${video.id}" onchange="markChanged('${video.id}')" oninput="autoResizeTextarea(this)">${video.description}</textarea>
+            </div>
+
+            <div class="video-actions">
+              <button class="btn btn-success" onclick="updateVideo('${video.id}')" id="update-btn-${video.id}" style="display: none;">
+                Update Video Info
+              </button>
+            </div>
+          </div>
+        `;
+        videoList.insertAdjacentHTML('beforeend', videoHTML);
+
+        setTimeout(() => {
+          const textarea = document.getElementById(`description-${video.id}`);
+          if (textarea) autoResizeTextarea(textarea);
+          updateTitleCounter(video.id);
+        }, 0);
+      });
+
+      displayedVideos = displayedVideos.concat(videosToAdd);
+      currentPage++;
+      isLoading = false;
+    }
+
+    function handleScroll() {
+      if (isLoading || displayedVideos.length >= allVideos.length) return;
+
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      if (scrollTop + windowHeight >= documentHeight - 1000) {
+        isLoading = true;
+        renderVideos();
+      }
+    }
+
+    window.addEventListener('load', () => {
+      initializeTheme();
+
+      document.querySelectorAll('textarea.form-control').forEach(textarea => {
+        autoResizeTextarea(textarea);
+      });
+
+      document.querySelectorAll('.video-item').forEach(item => {
+        const videoId = item.dataset.videoId;
+        updateTitleCounter(videoId);
+      });
+
+      const existingVideos = document.querySelectorAll('.video-item');
+      if (existingVideos.length > 0) {
+        allVideos = Array.from(existingVideos).map(item => {
+          const id = item.dataset.videoId;
+          const title = document.getElementById(`title-${id}`).value;
+          const description = document.getElementById(`description-${id}`).value;
+          const publishedAt = item.querySelector('.video-published').textContent.replace('Published: ', '') + 'T00:00:00Z';
+          const thumbnailUrl = item.querySelector('.video-thumbnail img').src;
+
+          return {
+            id: id,
+            title: title,
+            description: description,
+            published_at: publishedAt,
+            thumbnail_url: thumbnailUrl
+          };
+        });
+        sortAllVideos();
+        currentPage = Math.ceil(existingVideos.length / videosPerPage);
+                displayedVideos = allVideos.slice(0, currentPage * videosPerPage);
+
+        const saveJsonBtn = document.getElementById('save-json-btn');
+        if (saveJsonBtn) {
+          saveJsonBtn.disabled = false;
+        }
+      }
+
+      initializeMobileMenu();
+    });
+
+    function initializeMobileMenu() {
+      const existingVideos = document.querySelectorAll('.video-item');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const burgerMenu = document.querySelector('.burger-menu');
+
+      if (window.innerWidth <= 768) {
+        if (existingVideos.length === 0) {
+          mobileMenu.classList.add('show');
+          burgerMenu.classList.add('active');
+        }
+        else {
+          mobileMenu.classList.remove('show');
+          burgerMenu.classList.remove('active');
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('beforeunload', (event) => {
+      if (changedVideos.size > 0) {
+        const message = `You have ${changedVideos.size} unsaved changes. Are you sure you want to leave?`;
+        event.preventDefault();
+        event.returnValue = message;
+        return message;
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.dropdown')) {
+        document.querySelector('.dropdown').classList.remove('show');
+      }
+      if (window.innerWidth <= 768 && !event.target.closest('.header-content')) {
+        const mobileMenu = document.getElementById('mobile-menu');
+        const burgerMenu = document.querySelector('.burger-menu');
+
+        if (mobileMenu.classList.contains('show')) {
+          mobileMenu.classList.remove('show');
+          burgerMenu.classList.remove('active');
+        }
+      }
+    });
+
+    setInterval(() => {
+      if (changedVideos.size > 0) {
+        console.log(`${changedVideos.size} videos have unsaved changes`);
+      }
+    }, 30000);
+  </script>
+</body>
+</html>

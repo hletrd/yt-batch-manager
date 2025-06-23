@@ -1,0 +1,84 @@
+{
+  "name": "yt-batch-manager",
+  "version": "1.0.0",
+  "description": "YouTube Batch Manager - Electron TypeScript Application",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron .",
+    "dev": "concurrently \"tsc -w\" \"wait-on dist/main.js && electron . --dev\"",
+    "pack": "electron-builder",
+    "dist": "electron-builder --publish=never",
+    "clean": "rimraf dist",
+    "build:win": "npm run build && electron-builder --win --publish=never",
+    "build:win:x64": "npm run build && electron-builder --win --x64 --publish=never",
+    "build:win:arm64": "npm run build && electron-builder --win --arm64 --publish=never",
+    "build:mac": "npm run build && electron-builder --mac --universal --publish=never",
+    "build:mac:universal": "npm run build && electron-builder --mac --universal --publish=never",
+    "build:all": "npm run build && electron-builder --win --mac --linux --publish=never"
+  },
+  "keywords": ["youtube", "batch", "manager", "electron", "typescript"],
+  "author": "YT Batch Manager",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.34.1",
+    "@typescript-eslint/parser": "^8.34.1",
+    "concurrently": "^9.2.0",
+    "electron": "^36.5.0",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.29.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3",
+    "wait-on": "^8.0.3"
+  },
+  "dependencies": {
+    "google-auth-library": "^10.1.0",
+    "googleapis": "^150.0.1",
+    "electron-store": "^10.1.0"
+  },
+  "build": {
+    "appId": "com.ytbatchmanager.app",
+    "productName": "YT Batch Manager",
+    "directories": {
+      "output": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "src/renderer.html",
+      "cache/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.png"
+    }
+  }
+}

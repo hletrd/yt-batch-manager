@@ -1,0 +1,774 @@
+import { app, BrowserWindow, ipcMain, dialog, shell, screen } from 'electron';
+import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
+import * as path from 'path';
+import * as https from 'https';
+import * as http from 'http';
+import * as url from 'url';
+import Store from 'electron-store';
+
+interface VideoData {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail_url: string;
+  thumbnails: Record<string, ThumbnailData>;
+  published_at: string;
+  privacy_status: string;
+}
+
+interface ThumbnailData {
+  url: string;
+  width: number;
+  height: number;
+}
+
+interface UpdateRequest {
+  video_id: string;
+  title: string;
+  description: string;
+}
+
+interface BatchUpdateResponse {
+  success: boolean;
+  results: {
+    successful: Array<{ video_id: string; title: string }>;
+    failed: Array<{ video_id: string; error: string }>;
+  };
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
+}
+
+interface WindowState {
+  width: number;
+  height: number;
+  x?: number;
+  y?: number;
+  isMaximized?: boolean;
+}
+
+interface StoreSchema {
+  windowState?: WindowState;
+}
+
+const SCOPES = ['https://www.googleapis.com/auth/youtube'];
+const CACHE_DIR = path.join(__dirname, '../cache/thumbnails');
+const CREDENTIALS_PATH = 'credentials.json';
+const TOKEN_PATH = 'token.json';
+
+const store = new Store<StoreSchema>() as any;
+
+class YouTubeManager {
+  private oauth2Client: OAuth2Client;
+  private youtube: any;
+  private videos: VideoData[] = [];
+  private thumbnailUrls: Record<string, string> = {};
+
+  constructor() {
+    this.oauth2Client = new OAuth2Client();
+    this.ensureCacheDir();
+  }
+
+  private async ensureCacheDir(): Promise<void> {
+    try {
+      await fs.mkdir(CACHE_DIR, { recursive: true });
+    } catch (error) {
+      console.error('Error creating cache directory:', error);
+    }
+  }
+
+  async authenticate(): Promise<boolean> {
+    try {
+      if (!fsSync.existsSync(CREDENTIALS_PATH)) {
+        throw new Error('credentials.json not found. Please download it from Google Cloud Console.');
+      }
+
+      const credentialsContent = await fs.readFile(CREDENTIALS_PATH, 'utf-8');
+      const credentials = JSON.parse(credentialsContent);
+      const { client_secret, client_id, redirect_uris } = credentials.installed;
+
+      this.oauth2Client = new OAuth2Client(client_id, client_secret, redirect_uris[0]);
+
+      let tokens = null;
+      if (fsSync.existsSync(TOKEN_PATH)) {
+        const tokenContent = await fs.readFile(TOKEN_PATH, 'utf-8');
+        tokens = JSON.parse(tokenContent);
+        this.oauth2Client.setCredentials(tokens);
+      }
+
+      if (!tokens || !tokens.access_token) {
+        tokens = await this.getNewToken();
+      } else {
+        try {
+          const tokenInfo = await this.oauth2Client.getTokenInfo(tokens.access_token);
+          if (!tokenInfo) {
+            throw new Error('Invalid token');
+          }
+        } catch (error) {
+          if (tokens.refresh_token) {
+            try {
+              const { credentials } = await this.oauth2Client.refreshAccessToken();
+              tokens = credentials;
+              this.oauth2Client.setCredentials(tokens);
+              await fs.writeFile(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+            } catch (refreshError) {
+              tokens = await this.getNewToken();
+            }
+          } else {
+            tokens = await this.getNewToken();
+          }
+        }
+      }
+
+      this.youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
+      return true;
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      return false;
+    }
+  }
+
+  private async getNewToken(): Promise<any> {
+    const port = await this.findAvailablePort(5000);
+    const redirectUri = `http://localhost:${port}/callback`;
+
+    this.oauth2Client = new OAuth2Client(
+      this.oauth2Client._clientId,
+      this.oauth2Client._clientSecret,
+      redirectUri
+    );
+
+    const authUrl = this.oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: SCOPES,
+    });
+
+    const tokens = await this.startCallbackServer(port, authUrl);
+    this.oauth2Client.setCredentials(tokens);
+
+    await fs.writeFile(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+
+    return tokens;
+  }
+
+  private async findAvailablePort(startPort: number): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const tryPort = (port: number) => {
+        const server = http.createServer();
+        server.listen(port, () => {
+          server.close(() => resolve(port));
+        });
+        server.on('error', () => {
+          if (port < startPort + 100) {
+            tryPort(port + 1);
+          } else {
+            reject(new Error('No available port found'));
+          }
+        });
+      };
+      tryPort(startPort);
+    });
+  }
+
+  private async startCallbackServer(port: number, authUrl: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const server = http.createServer((req, res) => {
+        const parsedUrl = url.parse(req.url!, true);
+
+        if (parsedUrl.pathname === '/callback') {
+          const code = parsedUrl.query.code as string;
+          const error = parsedUrl.query.error as string;
+
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+
+          if (error) {
+            res.end(`
+              <html><body>
+                <h2>Authentication Failed</h2>
+                <p>Error: ${error}</p>
+                <p>You can close this window.</p>
+              </body></html>
+            `);
+            server.close();
+            reject(new Error(`Authentication error: ${error}`));
+            return;
+          }
+
+          if (code) {
+            res.end(`
+              <html><body>
+                <h2>Authentication Successful!</h2>
+                <p>You can close this window and return to the application.</p>
+              </body></html>
+            `);
+
+            server.close();
+
+            this.oauth2Client.getToken(code).then(({ tokens }) => {
+              resolve(tokens);
+            }).catch(reject);
+          } else {
+            res.end(`
+              <html><body>
+                <h2>Authentication Failed</h2>
+                <p>No authorization code received.</p>
+                <p>You can close this window.</p>
+              </body></html>
+            `);
+            server.close();
+            reject(new Error('No authorization code received'));
+          }
+        } else {
+          res.writeHead(404);
+          res.end('Not found');
+        }
+      });
+
+      server.listen(port, () => {
+        shell.openExternal(authUrl);
+      });
+
+      server.on('error', (error) => {
+        reject(error);
+      });
+    });
+  }
+
+  private async downloadThumbnail(url: string, filename: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const filePath = path.join(CACHE_DIR, filename);
+      const file = fsSync.createWriteStream(filePath);
+
+      https.get(url, (response) => {
+        response.pipe(file);
+        file.on('finish', () => {
+          file.close();
+          resolve(true);
+        });
+      }).on('error', (error) => {
+        console.error(`Error downloading thumbnail ${url}:`, error);
+        fsSync.unlink(filePath, () => {});
+        resolve(false);
+      });
+    });
+  }
+
+  private createLocalThumbnailUrls(videoId: string, thumbnails: any): Record<string, ThumbnailData> {
+    const localThumbnails: Record<string, ThumbnailData> = {};
+
+    for (const [size, thumbData] of Object.entries(thumbnails as Record<string, any>)) {
+      const { width, height, url } = thumbData;
+      const filename = `${videoId}_${size}_${width}_${height}.jpg`;
+
+      this.thumbnailUrls[filename] = url;
+
+      localThumbnails[size] = {
+        url: `cache://${filename}`,
+        width,
+        height,
+      };
+    }
+
+    return localThumbnails;
+  }
+
+  async getChannelInfo(): Promise<any> {
+    try {
+      if (!this.youtube) {
+        throw new Error('YouTube API not authenticated');
+      }
+
+      const channelsResponse = await this.youtube.channels.list({
+        part: 'snippet',
+        mine: true,
+      });
+
+      if (!channelsResponse.data.items?.length) {
+        return null;
+      }
+
+      const channel = channelsResponse.data.items[0];
+      return {
+        name: channel.snippet.title,
+        thumbnail: channel.snippet.thumbnails?.default?.url || channel.snippet.thumbnails?.medium?.url,
+        id: channel.id,
+      };
+    } catch (error) {
+      console.error('Error fetching channel info:', error);
+      return null;
+    }
+  }
+
+  async getChannelVideos(channelId?: string, maxResults: number = 200): Promise<VideoData[]> {
+    try {
+      if (!this.youtube) {
+        throw new Error('YouTube API not authenticated');
+      }
+
+      let uploadsPlaylistId: string;
+
+      if (!channelId) {
+        const channelsResponse = await this.youtube.channels.list({
+          part: 'contentDetails',
+          mine: true,
+        });
+
+        if (!channelsResponse.data.items?.length) {
+          return [];
+        }
+
+        uploadsPlaylistId = channelsResponse.data.items[0].contentDetails.relatedPlaylists.uploads;
+      } else {
+        const channelsResponse = await this.youtube.channels.list({
+          part: 'contentDetails',
+          id: channelId,
+        });
+
+        if (!channelsResponse.data.items?.length) {
+          return [];
+        }
+
+        uploadsPlaylistId = channelsResponse.data.items[0].contentDetails.relatedPlaylists.uploads;
+      }
+
+      const playlistItems: any[] = [];
+      let nextPageToken: string | undefined;
+
+      while (playlistItems.length < maxResults) {
+        const playlistResponse = await this.youtube.playlistItems.list({
+          part: 'snippet,status',
+          playlistId: uploadsPlaylistId,
+          maxResults: Math.min(50, maxResults - playlistItems.length),
+          pageToken: nextPageToken,
+        });
+
+        playlistItems.push(...(playlistResponse.data.items || []));
+        nextPageToken = playlistResponse.data.nextPageToken;
+
+        if (!nextPageToken) break;
+      }
+
+      const videos: VideoData[] = [];
+
+      for (const item of playlistItems) {
+        try {
+          const snippet = item.snippet || {};
+          const resourceId = snippet.resourceId || {};
+
+          if (!resourceId.videoId) continue;
+
+          const videoId = resourceId.videoId;
+          const thumbnails = snippet.thumbnails || {};
+
+          const localThumbnails = this.createLocalThumbnailUrls(videoId, thumbnails);
+
+          let thumbnailUrl = '';
+          for (const size of ['medium', 'high', 'default', 'standard']) {
+            if (localThumbnails[size]) {
+              thumbnailUrl = localThumbnails[size].url;
+              break;
+            }
+          }
+
+          const status = item.status || {};
+          const privacyStatus = status.privacyStatus || 'unknown';
+
+          const videoData: VideoData = {
+            id: videoId,
+            title: snippet.title || '',
+            description: snippet.description || '',
+            thumbnail_url: thumbnailUrl,
+            thumbnails: localThumbnails,
+            published_at: snippet.publishedAt || '',
+            privacy_status: privacyStatus,
+          };
+
+          videos.push(videoData);
+        } catch (error) {
+          console.error('Error processing video item:', error);
+          continue;
+        }
+      }
+
+      this.videos = videos;
+      return videos;
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+      return [];
+    }
+  }
+
+  async updateVideo(videoId: string, title: string, description: string): Promise<boolean> {
+    try {
+      if (!this.youtube) {
+        throw new Error('YouTube API not authenticated');
+      }
+
+      await this.youtube.videos.update({
+        part: 'snippet',
+        requestBody: {
+          id: videoId,
+          snippet: {
+            title,
+            description,
+            categoryId: '22',
+          },
+        },
+      });
+
+      return true;
+    } catch (error) {
+      console.error(`Error updating video ${videoId}:`, error);
+      return false;
+    }
+  }
+
+  async saveVideosToFile(filename: string = 'videos_backup.json'): Promise<boolean> {
+    try {
+      await fs.writeFile(filename, JSON.stringify(this.videos, null, 2), 'utf-8');
+      return true;
+    } catch (error) {
+      console.error('Error saving videos:', error);
+      return false;
+    }
+  }
+
+  async loadVideosFromFile(filename: string = 'videos_backup.json'): Promise<boolean> {
+    try {
+      if (fsSync.existsSync(filename)) {
+        const content = await fs.readFile(filename, 'utf-8');
+        this.videos = JSON.parse(content);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading videos:', error);
+      return false;
+    }
+  }
+
+  getVideos(): VideoData[] {
+    return this.videos;
+  }
+
+  async getThumbnailPath(filename: string): Promise<string | null> {
+    const filePath = path.join(CACHE_DIR, filename);
+    if (fsSync.existsSync(filePath)) {
+      return filePath;
+    }
+
+    if (this.thumbnailUrls[filename]) {
+      const success = await this.downloadThumbnail(this.thumbnailUrls[filename], filename);
+      if (success) {
+        return filePath;
+      }
+    }
+
+    return null;
+  }
+}
+
+class ElectronApp {
+  private mainWindow: BrowserWindow | null = null;
+  private youtubeManager: YouTubeManager;
+
+  constructor() {
+    this.youtubeManager = new YouTubeManager();
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers(): void {
+    app.whenReady().then(() => {
+      this.createWindow();
+      this.setupIpcHandlers();
+    });
+
+    app.on('window-all-closed', () => {
+      if (process.platform !== 'darwin') {
+        app.quit();
+      }
+    });
+
+    app.on('activate', () => {
+      if (this.mainWindow === null) {
+        this.createWindow();
+      }
+    });
+  }
+
+  private createWindow(): void {
+    const windowState = this.getWindowState();
+
+    this.mainWindow = new BrowserWindow({
+      width: windowState.width,
+      height: windowState.height,
+      x: windowState.x,
+      y: windowState.y,
+      minWidth: 360,
+      minHeight: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js'),
+      },
+      titleBarStyle: 'default',
+      show: false,
+    });
+
+    if (windowState.isMaximized) {
+      this.mainWindow.maximize();
+    }
+
+    this.setupWindowStateTracking();
+
+    this.mainWindow.loadFile(path.join(__dirname, '../src/renderer.html'));
+
+    this.mainWindow.once('ready-to-show', () => {
+      this.mainWindow?.show();
+    });
+
+    if (process.argv.includes('--dev')) {
+      this.mainWindow.webContents.openDevTools();
+    }
+  }
+
+  private getWindowState(): WindowState {
+    const defaultState: WindowState = {
+      width: 1200,
+      height: 800,
+    };
+
+    const savedState = store.get('windowState') as WindowState | undefined;
+    if (!savedState) {
+      return defaultState;
+    }
+
+    const displays = screen.getAllDisplays();
+    let isValidPosition = false;
+
+    if (savedState.x !== undefined && savedState.y !== undefined) {
+      for (const display of displays) {
+        const { x, y, width, height } = display.bounds;
+
+        if (
+          savedState.x < x + width &&
+          savedState.x + savedState.width > x &&
+          savedState.y < y + height &&
+          savedState.y + savedState.height > y
+        ) {
+          isValidPosition = true;
+          break;
+        }
+      }
+    }
+
+    if (!isValidPosition) {
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+      savedState.x = Math.round((screenWidth - savedState.width) / 2);
+      savedState.y = Math.round((screenHeight - savedState.height) / 2);
+    }
+
+    savedState.width = Math.max(360, savedState.width);
+    savedState.height = Math.max(600, savedState.height);
+
+    return savedState;
+  }
+
+  private setupWindowStateTracking(): void {
+    if (!this.mainWindow) return;
+
+    const saveWindowState = () => {
+      if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+
+      const bounds = this.mainWindow.getBounds();
+      const isMaximized = this.mainWindow.isMaximized();
+
+      const windowState: WindowState = {
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y,
+        isMaximized,
+      };
+
+      store.set('windowState', windowState);
+    };
+
+    this.mainWindow.on('resize', saveWindowState);
+    this.mainWindow.on('move', saveWindowState);
+    this.mainWindow.on('maximize', saveWindowState);
+    this.mainWindow.on('unmaximize', saveWindowState);
+    this.mainWindow.on('close', saveWindowState);
+  }
+
+  private setupIpcHandlers(): void {
+    ipcMain.handle('youtube:authenticate', async () => {
+      return await this.youtubeManager.authenticate();
+    });
+
+    ipcMain.handle('youtube:load-videos', async () => {
+      try {
+        const videos = await this.youtubeManager.getChannelVideos();
+        return { success: true, videos, count: videos.length };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
+    });
+
+    ipcMain.handle('youtube:update-video', async (_, { video_id, title, description }: UpdateRequest) => {
+      try {
+        const success = await this.youtubeManager.updateVideo(video_id, title, description);
+
+        if (success) {
+          const videos = this.youtubeManager.getVideos();
+          const video = videos.find(v => v.id === video_id);
+          if (video) {
+            video.title = title;
+            video.description = description;
+          }
+        }
+
+        return { success };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
+    });
+
+    ipcMain.handle('youtube:update-videos-batch', async (_, { updates }: { updates: UpdateRequest[] }): Promise<BatchUpdateResponse> => {
+      const results = {
+        successful: [] as Array<{ video_id: string; title: string }>,
+        failed: [] as Array<{ video_id: string; error: string }>,
+      };
+
+      for (const update of updates) {
+        const { video_id, title, description } = update;
+
+        if (!video_id || title === undefined || description === undefined) {
+          results.failed.push({
+            video_id: video_id || 'unknown',
+            error: 'Missing required fields',
+          });
+          continue;
+        }
+
+        try {
+          const success = await this.youtubeManager.updateVideo(video_id, title, description);
+
+          if (success) {
+            const videos = this.youtubeManager.getVideos();
+            const video = videos.find(v => v.id === video_id);
+            if (video) {
+              video.title = title;
+              video.description = description;
+            }
+
+            results.successful.push({ video_id, title });
+          } else {
+            results.failed.push({
+              video_id,
+              error: 'YouTube API update failed',
+            });
+          }
+        } catch (error) {
+          results.failed.push({
+            video_id,
+            error: (error as Error).message,
+          });
+        }
+      }
+
+      return {
+        success: results.successful.length > 0,
+        results,
+        summary: {
+          total: updates.length,
+          successful: results.successful.length,
+          failed: results.failed.length,
+        },
+      };
+    });
+
+    ipcMain.handle('youtube:save-videos', async () => {
+      const success = await this.youtubeManager.saveVideosToFile();
+      return { success };
+    });
+
+    ipcMain.handle('youtube:load-from-file', async () => {
+      const success = await this.youtubeManager.loadVideosFromFile();
+      if (success) {
+        return { success: true, videos: this.youtubeManager.getVideos() };
+      }
+      return { success: false, message: 'No backup file found' };
+    });
+
+    ipcMain.handle('youtube:download-videos', async () => {
+      try {
+        const result = await dialog.showSaveDialog(this.mainWindow!, {
+          title: 'Save Videos Backup',
+          defaultPath: 'videos_backup.json',
+          filters: [
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        });
+
+        if (!result.canceled && result.filePath) {
+          const success = await this.youtubeManager.saveVideosToFile(result.filePath);
+          return { success, filePath: result.filePath };
+        }
+
+        return { success: false, cancelled: true };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
+    });
+
+    ipcMain.handle('youtube:load-json-file', async () => {
+      try {
+        const result = await dialog.showOpenDialog(this.mainWindow!, {
+          title: 'Load Videos Backup',
+          filters: [
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+          properties: ['openFile'],
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+          const success = await this.youtubeManager.loadVideosFromFile(result.filePaths[0]);
+          if (success) {
+            return { success: true, videos: this.youtubeManager.getVideos() };
+          }
+          return { success: false, message: 'Failed to load file' };
+        }
+
+        return { success: false, cancelled: true };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
+    });
+
+    ipcMain.handle('youtube:get-thumbnail', async (_, filename: string) => {
+      const thumbnailPath = await this.youtubeManager.getThumbnailPath(filename);
+      return { thumbnailPath };
+    });
+
+    ipcMain.handle('youtube:get-channel-info', async () => {
+      const channelInfo = await this.youtubeManager.getChannelInfo();
+      return { channelInfo };
+    });
+
+    ipcMain.handle('youtube:get-videos', async () => {
+      return { videos: this.youtubeManager.getVideos() };
+    });
+  }
+}
+
+new ElectronApp();
