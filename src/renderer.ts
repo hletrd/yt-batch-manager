@@ -248,26 +248,49 @@ class YouTubeBatchManager {
           this.showStatus(rendererI18n.t('status.allVideosUpdatedSuccessfully', { successCount }), 'success');
         }
 
-        const successfulVideoIds = result.results?.successful || Array.from(this.state.changedVideos);
-        successfulVideoIds.forEach((videoId: string) => {
-          const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
-          const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+        const successfulUpdates = result.results?.successful || [];
+        if (successfulUpdates.length > 0) {
+          successfulUpdates.forEach((update: { video_id: string; title: string }) => {
+            const videoId = update.video_id;
+            const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
+            const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
 
-          if (titleInput) {
-            const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
-            if (videoTitleEl) {
-              videoTitleEl.textContent = titleInput.value;
-            }
+            if (titleInput) {
+              const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
+              if (videoTitleEl) {
+                videoTitleEl.textContent = titleInput.value;
+              }
 
-            const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
-            if (videoIndex !== -1) {
-              this.state.allVideos[videoIndex].title = titleInput.value;
-              if (descriptionInput) {
-                this.state.allVideos[videoIndex].description = descriptionInput.value;
+              const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
+              if (videoIndex !== -1) {
+                this.state.allVideos[videoIndex].title = titleInput.value;
+                if (descriptionInput) {
+                  this.state.allVideos[videoIndex].description = descriptionInput.value;
+                }
               }
             }
-          }
-        });
+          });
+        } else {
+          Array.from(this.state.changedVideos).forEach((videoId: string) => {
+            const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
+            const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+
+            if (titleInput) {
+              const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
+              if (videoTitleEl) {
+                videoTitleEl.textContent = titleInput.value;
+              }
+
+              const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
+              if (videoIndex !== -1) {
+                this.state.allVideos[videoIndex].title = titleInput.value;
+                if (descriptionInput) {
+                  this.state.allVideos[videoIndex].description = descriptionInput.value;
+                }
+              }
+            }
+          });
+        }
 
         this.state.changedVideos.clear();
         document.querySelectorAll('[id^="update-btn-"]').forEach(btn => {
