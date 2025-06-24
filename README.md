@@ -2,6 +2,8 @@
 
 ![YT Batch Manager](./docs/screenshot.png)
 
+![Edit](./docs/edit.png)
+
 As both YouTube studio webpage and YT studio mobile app does not provide a convinient user experiences for batch editing video titles and descriptions, I had to make this app to manage titles and descriptions of my videos in a single place.
 
 This is an Electron port, as a standalone app, of [yt-batch-manager-py](https://github.com/hletrd/yt-batch-manager-py). It supports macOS(Intel, Apple Silicon), and Windows (x86-64, arm64).
