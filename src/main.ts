@@ -749,31 +749,39 @@ class ElectronApp {
       return defaultState;
     }
 
-    const displays = screen.getAllDisplays();
-    let isValidPosition = false;
-
-    if (savedState.x !== undefined && savedState.y !== undefined) {
-      for (const display of displays) {
-        const { x, y, width, height } = display.bounds;
-
-        if (
-          savedState.x < x + width &&
-          savedState.x + savedState.width > x &&
-          savedState.y < y + height &&
-          savedState.y + savedState.height > y
-        ) {
-          isValidPosition = true;
-          break;
-        }
-      }
+    if (!app.isReady()) {
+      return savedState;
     }
 
-    if (!isValidPosition) {
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    try {
+      const displays = screen.getAllDisplays();
+      let isValidPosition = false;
 
-      savedState.x = Math.round((screenWidth - savedState.width) / 2);
-      savedState.y = Math.round((screenHeight - savedState.height) / 2);
+      if (savedState.x !== undefined && savedState.y !== undefined) {
+        for (const display of displays) {
+          const { x, y, width, height } = display.bounds;
+
+          if (
+            savedState.x < x + width &&
+            savedState.x + savedState.width > x &&
+            savedState.y < y + height &&
+            savedState.y + savedState.height > y
+          ) {
+            isValidPosition = true;
+            break;
+          }
+        }
+      }
+
+      if (!isValidPosition) {
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+        savedState.x = Math.round((screenWidth - savedState.width) / 2);
+        savedState.y = Math.round((screenHeight - savedState.height) / 2);
+      }
+    } catch (error) {
+      console.warn('Screen module not available, using saved state as-is:', error);
     }
 
     savedState.width = Math.max(360, savedState.width);
