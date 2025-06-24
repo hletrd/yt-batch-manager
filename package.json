@@ -50,15 +50,14 @@
     "files": [
       "dist/**/*",
       "src/renderer.html",
-      "src/i18n/**/*",
-      "node_modules/**/*"
+      "src/i18n/**/*"
     ],
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
         {
           "target": "dmg",
-          "arch": ["universal"]
+          "arch": ["universal", "x64", "arm64"]
         }
       ],
       "icon": "assets/icon.png",
