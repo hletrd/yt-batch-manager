@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, shell } from 'electron';
+const { contextBridge, ipcRenderer, shell } = require('electron');
 
 interface YouTubeAPI {
   authenticate: () => Promise<{ success: boolean; error?: string }>;
@@ -7,13 +7,15 @@ interface YouTubeAPI {
   updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string }> }) => Promise<any>;
   saveVideos: () => Promise<any>;
   loadFromFile: () => Promise<any>;
-  downloadVideos: () => Promise<any>;
+  downloadVideoInfo: () => Promise<any>;
   loadJsonFile: () => Promise<any>;
   getThumbnail: (filename: string) => Promise<any>;
   getChannelInfo: () => Promise<any>;
   getVideos: () => Promise<any>;
   checkCredentials: () => Promise<{ success: boolean; error?: string; path?: string }>;
   openExternal: (url: string) => Promise<void>;
+  getAvailableLanguages: () => Promise<{ languages: string[] }>;
+  getCurrentLanguage: () => Promise<{ language: string }>;
 }
 
 const youtubeAPI: YouTubeAPI = {
@@ -23,19 +25,15 @@ const youtubeAPI: YouTubeAPI = {
   updateVideosBatch: (data) => ipcRenderer.invoke('youtube:update-videos-batch', data),
   saveVideos: () => ipcRenderer.invoke('youtube:save-videos'),
   loadFromFile: () => ipcRenderer.invoke('youtube:load-from-file'),
-  downloadVideos: () => ipcRenderer.invoke('youtube:download-videos'),
+  downloadVideoInfo: () => ipcRenderer.invoke('youtube:download-videos'),
   loadJsonFile: () => ipcRenderer.invoke('youtube:load-json-file'),
   getThumbnail: (filename) => ipcRenderer.invoke('youtube:get-thumbnail', filename),
   getChannelInfo: () => ipcRenderer.invoke('youtube:get-channel-info'),
   getVideos: () => ipcRenderer.invoke('youtube:get-videos'),
   checkCredentials: () => ipcRenderer.invoke('youtube:check-credentials'),
   openExternal: (url) => shell.openExternal(url),
+  getAvailableLanguages: () => ipcRenderer.invoke('i18n:get-available-languages'),
+  getCurrentLanguage: () => ipcRenderer.invoke('i18n:get-current-language'),
 };
 
 contextBridge.exposeInMainWorld('youtubeAPI', youtubeAPI);
-
-declare global {
-  interface Window {
-    youtubeAPI: YouTubeAPI;
-  }
-}

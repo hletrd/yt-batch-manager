@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT Batch Manager</title>
+  <title data-i18n="app.title">YT Batch Manager</title>
   <style>
     :root {
       --bg-primary: #ffffff;
@@ -801,7 +801,7 @@
           <div class="burger-line"></div>
           <div class="burger-line"></div>
         </button>
-        <h1>YT Batch Manager</h1>
+        <h1 data-i18n="app.title">YT Batch Manager</h1>
       </div>
       <div class="header-right">
         <button class="theme-toggle" onclick="app.toggleTheme()" aria-label="Toggle theme">
@@ -817,20 +817,20 @@
                 <path d="M7 12h10"/>
                 <path d="M10 18h4"/>
               </svg>
-              <span class="sort-hint">Sort by</span> <span id="current-sort">Date (Newest)</span> ▼
+              <span class="sort-hint" data-i18n="navigation.sortBy">Sort by</span> <span id="current-sort" data-i18n="sorting.dateNewestFirst">Date (Newest)</span> ▼
             </button>
             <div class="dropdown-content">
-              <a href="#" onclick="app.sortVideos('date-desc')">Date (Newest First)</a>
-              <a href="#" onclick="app.sortVideos('date-asc')">Date (Oldest First)</a>
-              <a href="#" onclick="app.sortVideos('title-asc')">Title (A-Z)</a>
-              <a href="#" onclick="app.sortVideos('title-desc')">Title (Z-A)</a>
+              <a href="#" onclick="app.sortVideos('date-desc')" data-i18n="sorting.dateNewestFirst">Date (Newest First)</a>
+              <a href="#" onclick="app.sortVideos('date-asc')" data-i18n="sorting.dateOldestFirst">Date (Oldest First)</a>
+              <a href="#" onclick="app.sortVideos('title-asc')" data-i18n="sorting.titleAZ">Title (A-Z)</a>
+              <a href="#" onclick="app.sortVideos('title-desc')" data-i18n="sorting.titleZA">Title (Z-A)</a>
             </div>
           </div>
           <button class="btn btn-primary" onclick="app.loadVideos()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="5,3 19,12 5,21"/>
             </svg>
-            Load from YouTube
+            <span data-i18n="buttons.loadFromYouTube">Load from YouTube</span>
           </button>
           <div class="dropdown">
             <button class="dropdown-btn" onclick="app.toggleFileDropdown()">
@@ -841,7 +841,7 @@
                 <line x1="16" y1="17" x2="8" y2="17"/>
                 <polyline points="10,9 9,9 8,9"/>
               </svg>
-              Open / save as a file ▼
+              <span data-i18n="navigation.openSaveFile">Open / save as a file</span> ▼
             </button>
             <div class="dropdown-content" id="file-dropdown-content">
               <a href="#" onclick="app.loadFromFile()">
@@ -852,15 +852,15 @@
                   <line x1="16" y1="17" x2="8" y2="17"/>
                   <polyline points="10,9 9,9 8,9"/>
                 </svg>
-                Load from JSON
+                <span data-i18n="fileOperations.loadFromJSON">Load from JSON</span>
               </a>
-              <a href="#" onclick="app.downloadVideos()" id="save-json-link" style="pointer-events: none; opacity: 0.5;">
+              <a href="#" onclick="app.downloadVideoInfo()" id="save-json-link" style="pointer-events: none; opacity: 0.5;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="7,10 12,15 17,10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                Save as JSON
+                <span data-i18n="fileOperations.saveAsJSON">Save as JSON</span>
               </a>
             </div>
           </div>
@@ -881,8 +881,8 @@
     <div class="channel-content">
       <img id="channel-avatar" class="channel-avatar" src="" alt="Channel Avatar" style="display: none;">
       <div class="channel-details">
-        <h2 id="channel-name">Loading...</h2>
-        <p>Currently managing channel</p>
+        <h2 id="channel-name" data-i18n="app.loading">Loading...</h2>
+        <p data-i18n="app.currentlyManagingChannel">Currently managing channel</p>
       </div>
     </div>
   </div>
@@ -890,14 +890,14 @@
   <div class="main-content" id="main-content">
     <div id="video-list" class="video-list">
       <div class="no-videos">
-        <h3>No videos loaded</h3>
-        <p>Click "Load from YouTube" to fetch your videos, or "Load from File" to load a previous backup.</p>
+        <h3 data-i18n="app.noVideosLoaded">No videos loaded</h3>
+        <p data-i18n="app.noVideosLoadedDescription">Click "Load from YouTube" to fetch your videos, or "Load from File" to load a previous backup.</p>
       </div>
     </div>
   </div>
 
   <div id="status-message" class="status-message"></div>
 
-  <script src="../dist/renderer.js"></script>
+  <script type="module" src="../dist/renderer.js"></script>
 </body>
 </html>

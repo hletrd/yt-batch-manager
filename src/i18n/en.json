@@ -1,0 +1,141 @@
+{
+    "app": {
+        "title": "YT Batch Manager",
+        "loading": "Loading...",
+        "noVideosLoaded": "No videos loaded",
+        "noVideosLoadedDescription": "Click \"Load from YouTube\" to fetch your videos, or \"Load from File\" to load a previous backup.",
+        "currentlyManagingChannel": "Currently managing channel",
+        "published": "Published",
+        "thumbnail": "Thumbnail"
+    },
+    "buttons": {
+        "loadFromYouTube": "Load from YouTube",
+        "saveAll": "Save All",
+        "saveAllCount": "Save All ({count})",
+        "updateVideoInfo": "Update Video Info",
+        "updating": "Updating...",
+        "checkAgain": "Check Again"
+    },
+    "navigation": {
+        "sortBy": "Sort by",
+        "openSaveFile": "Open / save as a file"
+    },
+    "sorting": {
+        "dateNewestFirst": "Date (Newest First)",
+        "dateOldestFirst": "Date (Oldest First)",
+        "titleAZ": "Title (A-Z)",
+        "titleZA": "Title (Z-A)"
+    },
+    "fileOperations": {
+        "loadFromJSON": "Load from JSON",
+        "saveAsJSON": "Save as JSON"
+    },
+    "form": {
+        "title": "Title",
+        "description": "Description",
+        "titleCounter": "{current}/100"
+    },
+    "credentials": {
+        "required": "Credentials Required",
+        "expectedLocation": "Expected location:",
+        "setupInstructions": "Setup Instructions:",
+        "step1": "Go to Google Cloud Console",
+        "step2": "Create a new project or select an existing one",
+        "step3": "Enable the YouTube Data API v3",
+        "step4": "Create OAuth 2.0 credentials for a desktop application",
+        "step5": "Download the credentials JSON file",
+        "step6": "Rename it to credentials.json and place it in the app directory",
+        "step7": "Restart the application",
+        "credentialsNotFound": "credentials.json not found at: {path}\\nPlease download it from Google Cloud Console and place it in the same directory as the app.",
+        "credentialsMissingFields": "credentials.json is missing required fields. Please ensure you downloaded the correct OAuth 2.0 client credentials for a desktop application.",
+        "credentialsInvalid": "credentials.json is invalid or corrupted. Please download a new copy from Google Cloud Console.",
+        "stillNoValidCredentials": "Still no valid credentials found"
+    },
+    "authentication": {
+        "successful": "Authentication Successful!",
+        "successfulMessage": "You can close this window and return to the application.",
+        "failed": "Authentication Failed",
+        "failedError": "Error: {error}",
+        "failedNoCode": "No authorization code received.",
+        "canCloseWindow": "You can close this window.",
+        "unknownError": "Unknown authentication error occurred.",
+        "invalidToken": "Invalid token",
+        "authenticationError": "Authentication error: {error}",
+        "noAuthorizationCode": "No authorization code received"
+    },
+    "errors": {
+        "errorCreatingCacheDirectory": "Error creating cache directory:",
+        "errorDownloadingThumbnail": "Error downloading thumbnail {url}:",
+        "errorFetchingChannelInfo": "Error fetching channel info:",
+        "errorFetchingVideos": "Error fetching videos:",
+        "errorUpdatingVideo": "Error updating video {videoId}:",
+        "errorLoadingVideos": "Error loading videos:",
+        "errorInitializingApp": "Error initializing app:",
+        "failedToLoadFile": "Failed to load file",
+        "noAvailablePort": "No available port found",
+        "youtubeApiNotAuthenticated": "YouTube API not authenticated",
+        "youtubeApiUpdateFailed": "YouTube API update failed",
+        "missingRequiredFields": "Missing required fields"
+    },
+    "status": {
+        "savingVideos": "Saving {count} videos...",
+        "videosUpdatedWithFailures": "{successCount} videos updated, {failCount} failed",
+        "allVideosUpdatedSuccessfully": "All {successCount} videos updated successfully!",
+        "videoUpdatedSuccessfully": "Video updated successfully!",
+        "updatedSuccessfully": "Updated successfully!",
+        "saving": "Saving...",
+        "failedToUpdateVideo": "Failed to update video",
+        "errorUpdatingVideo": "Error updating video",
+        "fileSelectionCancelled": "File selection cancelled",
+        "failedToLoadVideosFromFile": "Failed to load video infos from file",
+        "videosLoadedSuccessfully": "{count} video infos loaded successfully!",
+        "loadedSuccessfully": "Loaded successfully!",
+        "authenticatedSuccessfully": "Authenticated successfully!",
+        "authenticationFailed": "Authentication failed",
+        "errorLoadingVideos": "Error loading videos",
+        "errorAuthenticating": "Error authenticating",
+        "noChannelInfo": "No channel information available",
+        "errorFetchingChannelInfo": "Error fetching channel information",
+        "videosSavedSuccessfully": "Video infos saved.",
+        "errorSavingVideos": "Error saving video infos",
+        "authenticatingAndLoadingVideos": "Authenticating and Loading video infos from Youtube...",
+        "preparingDownload": "Preparing to save...",
+        "downloadCancelled": "Save cancelled",
+        "loadingVideosFromFile": "Loading video infos from file...",
+        "videosLoadedFromFileSuccessfully": "Video infos loaded from file successfully!"
+    },
+    "privacy": {
+        "public": "Public",
+        "private": "Private",
+        "unlisted": "Unlisted",
+        "unknown": "Unknown"
+    },
+    "http": {
+        "authenticationSuccessful": "<html><body><h2>Authentication Successful!</h2><p>You can close this window and return to the application.</p></body></html>",
+        "authenticationFailed": "<html><body><h2>Authentication Failed</h2><p>Error: {error}</p><p>You can close this window.</p></body></html>",
+        "authenticationFailedNoCode": "<html><body><h2>Authentication Failed</h2><p>No authorization code received.</p><p>You can close this window.</p></body></html>",
+        "notFound": "Not found",
+        "contentTypeHtml": "text/html"
+    },
+    "console": {
+        "authenticationFailed": "Authentication failed:",
+        "unsavedChanges": "{count} videos have unsaved changes"
+    },
+    "dialog": {
+        "unsavedChangesWarning": "You have {count} unsaved changes. Are you sure you want to close the application?",
+        "jsonFiles": "JSON Files",
+        "allFiles": "All Files",
+        "fileSavePrompt": "Save video info as"
+    },
+    "urls": {
+        "googleCloudConsole": "https://console.cloud.google.com/",
+        "pleaseVisit": "Please visit: https://console.cloud.google.com/",
+        "youtubeWatch": "https://www.youtube.com/watch?v=",
+        "youtubeShort": "https://youtu.be/watch?v="
+    },
+    "files": {
+        "credentialsJson": "credentials.json",
+        "tokenJson": "token.json",
+        "videosBackupJson": "videos_backup.json"
+    }
+}

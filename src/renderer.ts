@@ -1,3 +1,29 @@
+import rendererI18n from './i18n/renderer-i18n.js';
+
+interface YouTubeAPI {
+  authenticate: () => Promise<{ success: boolean; error?: string }>;
+  loadVideos: () => Promise<any>;
+  updateVideo: (data: { video_id: string; title: string; description: string }) => Promise<any>;
+  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string }> }) => Promise<any>;
+  saveVideos: () => Promise<any>;
+  loadFromFile: () => Promise<any>;
+  downloadVideoInfo: () => Promise<any>;
+  loadJsonFile: () => Promise<any>;
+  getThumbnail: (filename: string) => Promise<any>;
+  getChannelInfo: () => Promise<any>;
+  getVideos: () => Promise<any>;
+  checkCredentials: () => Promise<{ success: boolean; error?: string; path?: string }>;
+  openExternal: (url: string) => Promise<void>;
+  getAvailableLanguages: () => Promise<{ languages: string[] }>;
+  getCurrentLanguage: () => Promise<{ language: string }>;
+}
+
+declare global {
+  interface Window {
+    youtubeAPI: YouTubeAPI;
+  }
+}
+
 interface VideoData {
   id: string;
   title: string;
@@ -88,7 +114,7 @@ class YouTubeBatchManager {
     const videoList = document.getElementById('video-list');
     if (!videoList) return;
 
-    const pathInfo = credentialsPath ? `<p><strong>Expected location:</strong><br><code>${credentialsPath}</code></p>` : '';
+    const pathInfo = credentialsPath ? `<p><strong>${rendererI18n.t('credentials.expectedLocation')}</strong><br><code>${credentialsPath}</code></p>` : '';
 
     videoList.innerHTML = `
       <div class="credentials-error">
@@ -99,24 +125,24 @@ class YouTubeBatchManager {
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
         </div>
-        <h3>Credentials Required</h3>
+        <h3>${rendererI18n.t('credentials.required')}</h3>
         <p>${errorMessage.replace(/\n/g, '<br>')}</p>
         ${pathInfo}
         <div class="credentials-help">
-          <h4>Setup Instructions:</h4>
+          <h4>${rendererI18n.t('credentials.setupInstructions')}</h4>
           <ol>
-                         <li>Go to <a href="#" onclick="window.youtubeAPI.openExternal?.('https://console.cloud.google.com/') || alert('Please visit: https://console.cloud.google.com/')">Google Cloud Console</a></li>
-            <li>Create a new project or select an existing one</li>
-            <li>Enable the YouTube Data API v3</li>
-            <li>Create OAuth 2.0 credentials for a desktop application</li>
-            <li>Download the credentials JSON file</li>
-            <li>Rename it to <code>credentials.json</code> and place it in the app directory</li>
-            <li>Restart the application</li>
+            <li>${rendererI18n.t('credentials.step1')} <a href="#" onclick="window.youtubeAPI.openExternal?.('${rendererI18n.t('urls.googleCloudConsole')}') || alert('${rendererI18n.t('urls.pleaseVisit')}')">${rendererI18n.t('credentials.step1')}</a></li>
+            <li>${rendererI18n.t('credentials.step2')}</li>
+            <li>${rendererI18n.t('credentials.step3')}</li>
+            <li>${rendererI18n.t('credentials.step4')}</li>
+            <li>${rendererI18n.t('credentials.step5')}</li>
+            <li>${rendererI18n.t('credentials.step6')}</li>
+            <li>${rendererI18n.t('credentials.step7')}</li>
           </ol>
         </div>
         <div class="credentials-actions">
-          <button class="btn btn-primary" onclick="window.youtubeAPI.checkCredentials().then(result => { if (result.success) { location.reload(); } else { app.showStatus(result.error || 'Still no valid credentials found', 'error'); } })">
-            Check Again
+          <button class="btn btn-primary" onclick="window.youtubeAPI.checkCredentials().then(result => { if (result.success) { location.reload(); } else { app.showStatus(result.error || '${rendererI18n.t('credentials.stillNoValidCredentials')}', 'error'); } })">
+            ${rendererI18n.t('buttons.checkAgain')}
           </button>
         </div>
       </div>
@@ -147,21 +173,18 @@ class YouTubeBatchManager {
     if (this.state.changedVideos.size > 0) {
       if (saveAllBtn) {
         saveAllBtn.style.display = 'flex';
-        saveAllBtn.textContent = `Save All (${this.state.changedVideos.size})`;
+        saveAllBtn.textContent = rendererI18n.t('buttons.saveAllCount', { count: this.state.changedVideos.size });
       }
     } else {
       if (saveAllBtn) saveAllBtn.style.display = 'none';
     }
   }
 
-    private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
+  private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
     const scrollTop = textarea.scrollTop;
-
     textarea.style.height = 'auto';
-
     const newHeight = Math.max(140, textarea.scrollHeight);
     textarea.style.height = newHeight + 'px';
-
     textarea.scrollTop = scrollTop;
   }
 
@@ -211,7 +234,7 @@ class YouTubeBatchManager {
       };
     });
 
-    this.showStatus(`Saving ${updates.length} videos...`, 'info');
+    this.showStatus(rendererI18n.t('status.savingVideos', { count: updates.length }), 'info');
 
     try {
       const result = await window.youtubeAPI.updateVideosBatch({ updates });
@@ -221,10 +244,31 @@ class YouTubeBatchManager {
         const failCount = result.results?.failed?.length || 0;
 
         if (failCount > 0) {
-          this.showStatus(`${successCount} videos updated, ${failCount} failed`, 'info');
+          this.showStatus(rendererI18n.t('status.videosUpdatedWithFailures', { successCount, failCount }), 'info');
         } else {
-          this.showStatus(`All ${successCount} videos updated successfully!`, 'success');
+          this.showStatus(rendererI18n.t('status.allVideosUpdatedSuccessfully', { successCount }), 'success');
         }
+
+        const successfulVideoIds = result.results?.successful || Array.from(this.state.changedVideos);
+        successfulVideoIds.forEach((videoId: string) => {
+          const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
+          const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+
+          if (titleInput) {
+            const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
+            if (videoTitleEl) {
+              videoTitleEl.textContent = titleInput.value;
+            }
+
+            const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
+            if (videoIndex !== -1) {
+              this.state.allVideos[videoIndex].title = titleInput.value;
+              if (descriptionInput) {
+                this.state.allVideos[videoIndex].description = descriptionInput.value;
+              }
+            }
+          }
+        });
 
         this.state.changedVideos.clear();
         document.querySelectorAll('[id^="update-btn-"]').forEach(btn => {
@@ -232,11 +276,11 @@ class YouTubeBatchManager {
         });
         this.updateSaveAllButton();
       } else {
-        this.showStatus('Failed to update videos', 'error');
+        this.showStatus(rendererI18n.t('status.failedToUpdateVideo'), 'error');
       }
     } catch (error) {
       console.error('Error:', error);
-      this.showStatus('Error updating videos', 'error');
+      this.showStatus(rendererI18n.t('status.errorUpdatingVideo'), 'error');
     } finally {
       saveAllBtn.disabled = false;
       saveAllBtn.innerHTML = originalText;
@@ -266,16 +310,16 @@ class YouTubeBatchManager {
 
   sortVideos(sortType: string): void {
     this.state.currentSort = sortType;
-    const sortNames: Record<string, string> = {
-      'date-desc': 'Date (Newest)',
-      'date-asc': 'Date (Oldest)',
-      'title-asc': 'Title (A-Z)',
-      'title-desc': 'Title (Z-A)',
+    const sortKeys: Record<string, string> = {
+      'date-desc': 'sorting.dateNewestFirst',
+      'date-asc': 'sorting.dateOldestFirst',
+      'title-asc': 'sorting.titleAZ',
+      'title-desc': 'sorting.titleZA',
     };
 
     const currentSortEl = document.getElementById('current-sort');
     if (currentSortEl) {
-      currentSortEl.textContent = sortNames[sortType];
+      currentSortEl.textContent = rendererI18n.t(sortKeys[sortType]);
     }
 
     document.querySelector('.dropdown')?.classList.remove('show');
@@ -303,12 +347,12 @@ class YouTubeBatchManager {
   }
 
   async loadVideos(): Promise<void> {
-    this.showStatus('Authenticating and loading videos from YouTube...', 'info');
+    this.showStatus(rendererI18n.t('status.authenticatingAndLoadingVideos'), 'info');
 
     try {
       const authResult = await window.youtubeAPI.authenticate();
       if (!authResult.success) {
-        this.showStatus(authResult.error || 'Authentication failed', 'error');
+        this.showStatus(authResult.error || rendererI18n.t('status.authenticationFailed'), 'error');
         return;
       }
 
@@ -321,7 +365,7 @@ class YouTubeBatchManager {
         this.sortAllVideos();
         this.state.currentPage = 0;
         this.renderVideos(true);
-        this.showStatus(`Loaded ${result.count} videos successfully!`, 'success');
+        this.showStatus(rendererI18n.t('status.videosLoadedSuccessfully', { count: result.count }), 'success');
 
         const saveJsonLink = document.getElementById('save-json-link') as HTMLAnchorElement;
         if (saveJsonLink) {
@@ -329,11 +373,11 @@ class YouTubeBatchManager {
           saveJsonLink.style.opacity = '1';
         }
       } else {
-        this.showStatus(result.error || 'Failed to load videos', 'error');
+        this.showStatus(result.error || rendererI18n.t('errors.errorLoadingVideos'), 'error');
       }
     } catch (error) {
       console.error('Error:', error);
-      this.showStatus('Error loading videos', 'error');
+      this.showStatus(rendererI18n.t('status.errorLoadingVideos'), 'error');
     }
   }
 
@@ -363,27 +407,27 @@ class YouTubeBatchManager {
     }
   }
 
-  async downloadVideos(): Promise<void> {
-    this.showStatus('Preparing download...', 'info');
+  async downloadVideoInfo(): Promise<void> {
+    this.showStatus(rendererI18n.t('status.preparingDownload'), 'info');
 
     try {
-      const result = await window.youtubeAPI.downloadVideos();
+      const result = await window.youtubeAPI.downloadVideoInfo();
 
       if (result.success && !result.cancelled) {
-        this.showStatus('Videos saved successfully!', 'success');
+        this.showStatus(rendererI18n.t('status.videosSavedSuccessfully'), 'success');
       } else if (result.cancelled) {
-        this.showStatus('Download cancelled', 'info');
+        this.showStatus(rendererI18n.t('status.downloadCancelled'), 'info');
       } else {
-        this.showStatus(result.error || 'Failed to save videos', 'error');
+        this.showStatus(result.error || rendererI18n.t('status.errorSavingVideos'), 'error');
       }
     } catch (error) {
       console.error('Error:', error);
-      this.showStatus('Error saving videos', 'error');
+      this.showStatus(rendererI18n.t('status.errorSavingVideos'), 'error');
     }
   }
 
   async loadFromFile(): Promise<void> {
-    this.showStatus('Loading videos from file...', 'info');
+    this.showStatus(rendererI18n.t('status.loadingVideosFromFile'), 'info');
 
     try {
       const result = await window.youtubeAPI.loadJsonFile();
@@ -393,7 +437,7 @@ class YouTubeBatchManager {
         this.sortAllVideos();
         this.state.currentPage = 0;
         this.renderVideos(true);
-        this.showStatus('Videos loaded from file successfully!', 'success');
+        this.showStatus(rendererI18n.t('status.videosLoadedFromFileSuccessfully'), 'success');
 
         const saveJsonLink = document.getElementById('save-json-link') as HTMLAnchorElement;
         if (saveJsonLink) {
@@ -401,13 +445,13 @@ class YouTubeBatchManager {
           saveJsonLink.style.opacity = '1';
         }
       } else if (result.cancelled) {
-        this.showStatus('File selection cancelled', 'info');
+        this.showStatus(rendererI18n.t('status.fileSelectionCancelled'), 'info');
       } else {
-        this.showStatus(result.message || result.error || 'Failed to load videos from file', 'error');
+        this.showStatus(result.message || result.error || rendererI18n.t('status.failedToLoadVideosFromFile'), 'error');
       }
     } catch (error) {
       console.error('Error:', error);
-      this.showStatus('Error loading videos from file', 'error');
+      this.showStatus(rendererI18n.t('status.failedToLoadVideosFromFile'), 'error');
     }
   }
 
@@ -427,16 +471,27 @@ class YouTubeBatchManager {
       });
 
       if (result.success) {
-        this.showStatus('Video updated successfully!', 'success');
+        this.showStatus(rendererI18n.t('status.videoUpdatedSuccessfully'), 'success');
         this.state.changedVideos.delete(videoId);
         updateBtn.style.display = 'none';
         this.updateSaveAllButton();
+
+        const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
+        if (videoTitleEl) {
+          videoTitleEl.textContent = titleInput.value;
+        }
+
+        const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
+        if (videoIndex !== -1) {
+          this.state.allVideos[videoIndex].title = titleInput.value;
+          this.state.allVideos[videoIndex].description = descriptionInput.value;
+        }
       } else {
-        this.showStatus('Failed to update video', 'error');
+        this.showStatus(rendererI18n.t('status.failedToUpdateVideo'), 'error');
       }
     } catch (error) {
       console.error('Error:', error);
-      this.showStatus('Error updating video', 'error');
+      this.showStatus(rendererI18n.t('status.errorUpdatingVideo'), 'error');
     } finally {
       updateBtn.disabled = false;
       updateBtn.textContent = 'Update Video';
@@ -473,8 +528,8 @@ class YouTubeBatchManager {
       if (this.state.allVideos.length === 0) {
         videoList.innerHTML = `
           <div class="no-videos">
-            <h3>No videos loaded</h3>
-            <p>Click "Load from YouTube" to fetch your videos, or "Load from File" to load a previous backup.</p>
+            <h3>${rendererI18n.t('app.noVideosLoaded')}</h3>
+            <p>${rendererI18n.t('app.noVideosLoadedDescription')}</p>
           </div>
         `;
       }
@@ -501,14 +556,14 @@ class YouTubeBatchManager {
               </a>
               <div class="video-title">${this.escapeHtml(video.title)}</div>
               <div class="video-published">
-                Published: ${video.published_at.substring(0, 10)}
-                ${video.privacy_status ? `<span class="privacy-status">${video.privacy_status.charAt(0).toUpperCase() + video.privacy_status.slice(1)}</span>` : ''}
+                ${rendererI18n.t('app.published')}: ${video.published_at.substring(0, 10)}
+                ${video.privacy_status ? `<span class="privacy-status">${rendererI18n.t(`privacy.${video.privacy_status}`) || rendererI18n.t('privacy.unknown')}</span>` : ''}
               </div>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="title-${video.id}">Title</label>
+            <label for="title-${video.id}">${rendererI18n.t('form.title')}</label>
             <input
               type="text"
               class="form-control title-input"
@@ -520,7 +575,7 @@ class YouTubeBatchManager {
           </div>
 
           <div class="form-group">
-            <label for="description-${video.id}">Description</label>
+            <label for="description-${video.id}">${rendererI18n.t('form.description')}</label>
             <textarea
               class="form-control"
               id="description-${video.id}"
@@ -530,7 +585,7 @@ class YouTubeBatchManager {
 
           <div class="video-actions">
             <button class="btn btn-success" onclick="app.updateVideo('${video.id}')" id="update-btn-${video.id}" style="display: none;">
-              Update Video Info
+              ${rendererI18n.t('buttons.updateVideoInfo')}
             </button>
           </div>
         </div>
@@ -613,15 +668,13 @@ class YouTubeBatchManager {
       return undefined;
     });
 
-        document.addEventListener('click', (event) => {
+    document.addEventListener('click', (event) => {
       if (!(event.target as Element).closest('.dropdown')) {
         document.querySelectorAll('.dropdown')?.forEach(dropdown => dropdown.classList.remove('show'));
       }
-
       if (window.innerWidth <= 768 && !(event.target as Element).closest('.header-content')) {
         const mobileMenu = document.getElementById('mobile-menu');
         const burgerMenu = document.querySelector('.burger-menu');
-
         if (!mobileMenu?.classList.contains('hide')) {
           mobileMenu?.classList.add('hide');
           burgerMenu?.classList.remove('active');
@@ -632,7 +685,6 @@ class YouTubeBatchManager {
     window.addEventListener('resize', () => {
       const mobileMenu = document.getElementById('mobile-menu');
       const burgerMenu = document.querySelector('.burger-menu');
-
       if (window.innerWidth > 768) {
         mobileMenu?.classList.remove('hide');
         burgerMenu?.classList.remove('active');
@@ -648,7 +700,9 @@ class YouTubeBatchManager {
 
   private async initializeApp(): Promise<void> {
     try {
-      // Check credentials first
+      await rendererI18n.waitForInitialization();
+      rendererI18n.updatePageTexts();
+
       const credentialsCheck = await window.youtubeAPI.checkCredentials();
       if (!credentialsCheck.success) {
         this.showCredentialsError(credentialsCheck.error!, credentialsCheck.path);
@@ -669,7 +723,7 @@ class YouTubeBatchManager {
         }
       }
     } catch (error) {
-      console.error('Error initializing app:', error);
+      console.error(rendererI18n.t('errors.errorInitializingApp'), error);
     }
   }
 }

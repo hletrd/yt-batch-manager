@@ -7,7 +7,13 @@ import * as path from 'path';
 import * as https from 'https';
 import * as http from 'http';
 import * as url from 'url';
+import { fileURLToPath } from 'url';
 import Store from 'electron-store';
+import { i18n } from './i18n/i18n.js';
+import * as crypto from 'crypto';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface VideoData {
   id: string;
@@ -58,6 +64,8 @@ interface StoreSchema {
 
 const SCOPES = ['https://www.googleapis.com/auth/youtube'];
 const CACHE_DIR = path.join(__dirname, '../cache/thumbnails');
+// MD5 hash of thumbnail indicating the video is being processed
+const ERROR_THUMBNAIL_MD5 = 'e2ddfee11ae7edcae257da47f3a78a70';
 
 
 const getPortableExecutableDir = (): string => {
@@ -113,7 +121,7 @@ class YouTubeManager {
     try {
       await fs.mkdir(CACHE_DIR, { recursive: true });
     } catch (error) {
-      console.error('Error creating cache directory:', error);
+      console.error(i18n.t('errors.errorCreatingCacheDirectory'), error);
     }
   }
 
@@ -123,7 +131,7 @@ class YouTubeManager {
     if (!fsSync.existsSync(credentialsPath)) {
       return {
         success: false,
-        error: `credentials.json not found at: ${credentialsPath}\nPlease download it from Google Cloud Console and place it in the same directory as the app.`,
+        error: i18n.t('credentials.credentialsNotFound', { path: credentialsPath }),
         path: credentialsPath
       };
     }
@@ -135,7 +143,7 @@ class YouTubeManager {
       if (!credentials.installed || !credentials.installed.client_secret || !credentials.installed.client_id || !credentials.installed.redirect_uris) {
         return {
           success: false,
-          error: 'credentials.json is missing required fields. Please ensure you downloaded the correct OAuth 2.0 client credentials for a desktop application.',
+          error: i18n.t('credentials.credentialsMissingFields'),
           path: credentialsPath
         };
       }
@@ -144,7 +152,7 @@ class YouTubeManager {
     } catch (parseError) {
       return {
         success: false,
-        error: 'credentials.json is invalid or corrupted. Please download a new copy from Google Cloud Console.',
+        error: i18n.t('credentials.credentialsInvalid'),
         path: credentialsPath
       };
     }
@@ -156,7 +164,7 @@ class YouTubeManager {
       if (!fsSync.existsSync(credentialsPath)) {
         return {
           success: false,
-          error: `credentials.json not found at: ${credentialsPath}\nPlease download it from Google Cloud Console and place it in the same directory as the app.`
+          error: i18n.t('credentials.credentialsNotFound', { path: credentialsPath })
         };
       }
 
@@ -167,14 +175,14 @@ class YouTubeManager {
       } catch (parseError) {
         return {
           success: false,
-          error: 'credentials.json is invalid or corrupted. Please download a new copy from Google Cloud Console.'
+          error: i18n.t('credentials.credentialsInvalid')
         };
       }
 
       if (!credentials.installed || !credentials.installed.client_secret || !credentials.installed.client_id || !credentials.installed.redirect_uris) {
         return {
           success: false,
-          error: 'credentials.json is missing required fields. Please ensure you downloaded the correct OAuth 2.0 client credentials for a desktop application.'
+          error: i18n.t('credentials.credentialsMissingFields')
         };
       }
 
@@ -216,10 +224,10 @@ class YouTubeManager {
       this.youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
       return { success: true };
     } catch (error) {
-      console.error('Authentication failed:', error);
+      console.error(i18n.t('console.authenticationFailed'), error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown authentication error occurred.'
+        error: error instanceof Error ? error.message : i18n.t('authentication.unknownError')
       };
     }
   }
@@ -278,25 +286,14 @@ class YouTubeManager {
           res.writeHead(200, { 'Content-Type': 'text/html' });
 
           if (error) {
-            res.end(`
-              <html><body>
-                <h2>Authentication Failed</h2>
-                <p>Error: ${error}</p>
-                <p>You can close this window.</p>
-              </body></html>
-            `);
+            res.end(i18n.t('http.authenticationFailed', { error }));
             server.close();
-            reject(new Error(`Authentication error: ${error}`));
+            reject(new Error(i18n.t('authentication.authenticationError', { error })));
             return;
           }
 
           if (code) {
-            res.end(`
-              <html><body>
-                <h2>Authentication Successful!</h2>
-                <p>You can close this window and return to the application.</p>
-              </body></html>
-            `);
+            res.end(i18n.t('http.authenticationSuccessful'));
 
             server.close();
 
@@ -304,15 +301,9 @@ class YouTubeManager {
               resolve(tokens);
             }).catch(reject);
           } else {
-            res.end(`
-              <html><body>
-                <h2>Authentication Failed</h2>
-                <p>No authorization code received.</p>
-                <p>You can close this window.</p>
-              </body></html>
-            `);
+            res.end(i18n.t('http.authenticationFailedNoCode'));
             server.close();
-            reject(new Error('No authorization code received'));
+            reject(new Error(i18n.t('authentication.noAuthorizationCode')));
           }
         } else {
           res.writeHead(404);
@@ -333,17 +324,28 @@ class YouTubeManager {
   private async downloadThumbnail(url: string, filename: string): Promise<boolean> {
     return new Promise((resolve) => {
       const filePath = path.join(CACHE_DIR, filename);
-      const file = fsSync.createWriteStream(filePath);
+      const chunks: Buffer[] = [];
 
       https.get(url, (response) => {
-        response.pipe(file);
-        file.on('finish', () => {
-          file.close();
+        response.on('data', (chunk) => {
+          chunks.push(chunk);
+        });
+
+        response.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          const hash = crypto.createHash('md5').update(buffer).digest('hex');
+
+          if (hash === ERROR_THUMBNAIL_MD5) {
+            console.log(`Skipping error thumbnail with MD5: ${hash} for ${filename}`);
+            resolve(false);
+            return;
+          }
+
+          fsSync.writeFileSync(filePath, buffer);
           resolve(true);
         });
       }).on('error', (error) => {
-        console.error(`Error downloading thumbnail ${url}:`, error);
-        fsSync.unlink(filePath, () => {});
+        console.error(i18n.t('errors.errorDownloadingThumbnail', { url }), error);
         resolve(false);
       });
     });
@@ -390,7 +392,7 @@ class YouTubeManager {
         id: channel.id,
       };
     } catch (error) {
-      console.error('Error fetching channel info:', error);
+      console.error(i18n.t('errors.errorFetchingChannelInfo'), error);
       return null;
     }
   }
@@ -574,7 +576,8 @@ class ElectronApp {
   }
 
   private setupEventHandlers(): void {
-    app.whenReady().then(() => {
+    app.whenReady().then(async () => {
+      await i18n.initialize();
       this.createWindow();
       this.setupIpcHandlers();
     });
@@ -860,6 +863,14 @@ class ElectronApp {
 
     ipcMain.handle('youtube:get-videos', async () => {
       return { videos: this.youtubeManager.getVideos() };
+    });
+
+    ipcMain.handle('i18n:get-available-languages', async () => {
+      return { languages: i18n.getAvailableLanguages() };
+    });
+
+    ipcMain.handle('i18n:get-current-language', async () => {
+      return { language: i18n.getCurrentLanguage() };
     });
   }
 }
