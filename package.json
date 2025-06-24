@@ -50,7 +50,7 @@
     "files": [
       "dist/**/*",
       "src/renderer.html",
-      "cache/**/*",
+      "src/i18n/**/*",
       "node_modules/**/*"
     ],
     "mac": {
