@@ -66,53 +66,16 @@ const SCOPES = ['https://www.googleapis.com/auth/youtube'];
 // MD5 hash of thumbnail indicating the video is being processed
 const ERROR_THUMBNAIL_MD5 = 'e2ddfee11ae7edcae257da47f3a78a70';
 
-const getPortableExecutableDir = (): string => {
-  if (process.env.PORTABLE_EXECUTABLE_DIR) {
-    return process.env.PORTABLE_EXECUTABLE_DIR;
-  }
-  if (process.env.PORTABLE_EXECUTABLE_FILE) {
-    return path.dirname(process.env.PORTABLE_EXECUTABLE_FILE);
-  }
-  return process.cwd();
-};
-
 const getCredentialsPath = (): string => {
-  if (app.isPackaged) {
-    if (process.platform === 'darwin') {
-      return path.join(path.dirname(app.getPath('exe')), '../../../', 'credentials.json');
-    } else {
-      const portableDir = getPortableExecutableDir();
-      return path.join(portableDir, 'credentials.json');
-    }
-  } else {
-    return path.join(__dirname, '..', 'credentials.json');
-  }
+  return path.join(app.getPath('userData'), 'credentials.json');
 };
 
 const getTokenPath = (): string => {
-  if (app.isPackaged) {
-    if (process.platform === 'darwin') {
-      return path.join(path.dirname(app.getPath('exe')), '../../../', 'token.json');
-    } else {
-      const portableDir = getPortableExecutableDir();
-      return path.join(portableDir, 'token.json');
-    }
-  } else {
-    return path.join(__dirname, '..', 'token.json');
-  }
+  return path.join(app.getPath('userData'), 'token.json');
 };
 
 const getCacheDirPath = (): string => {
-  if (app.isPackaged) {
-    if (process.platform === 'darwin') {
-      return path.join(path.dirname(app.getPath('exe')), '../../../', 'cache', 'thumbnails');
-    } else {
-      const portableDir = getPortableExecutableDir();
-      return path.join(portableDir, 'cache', 'thumbnails');
-    }
-  } else {
-    return path.join(__dirname, '..', 'cache', 'thumbnails');
-  }
+  return path.join(app.getPath('userData'), 'cache', 'thumbnails');
 };
 
 const CACHE_DIR = getCacheDirPath();
@@ -167,6 +130,77 @@ class YouTubeManager {
         success: false,
         error: i18n.t('credentials.credentialsInvalid'),
         path: credentialsPath
+      };
+    }
+  }
+
+  async selectCredentialsFile(mainWindow: BrowserWindow): Promise<{ success: boolean; error?: string; cancelled?: boolean }> {
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: i18n.t('credentials.selectCredentialsFile'),
+        filters: [
+          { name: 'JSON Files', extensions: ['json'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+        properties: ['openFile'],
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, cancelled: true };
+      }
+
+      const selectedPath = result.filePaths[0];
+      const credentialsPath = getCredentialsPath();
+
+      await fs.mkdir(path.dirname(credentialsPath), { recursive: true });
+
+      await fs.copyFile(selectedPath, credentialsPath);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  async removeStoredCredentials(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const credentialsPath = getCredentialsPath();
+      const tokenPath = getTokenPath();
+
+      if (fsSync.existsSync(credentialsPath)) {
+        await fs.unlink(credentialsPath);
+      }
+
+      if (fsSync.existsSync(tokenPath)) {
+        await fs.unlink(tokenPath);
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  async clearCache(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const cacheDir = getCacheDirPath();
+
+      if (fsSync.existsSync(cacheDir)) {
+        const files = await fs.readdir(cacheDir);
+        await Promise.all(files.map(file => fs.unlink(path.join(cacheDir, file))));
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -887,6 +921,18 @@ class ElectronApp {
 
     ipcMain.handle('i18n:get-current-language', async () => {
       return { language: i18n.getCurrentLanguage() };
+    });
+
+    ipcMain.handle('youtube:select-credentials-file', async () => {
+      return await this.youtubeManager.selectCredentialsFile(this.mainWindow!);
+    });
+
+    ipcMain.handle('youtube:remove-stored-credentials', async () => {
+      return await this.youtubeManager.removeStoredCredentials();
+    });
+
+    ipcMain.handle('youtube:clear-cache', async () => {
+      return await this.youtubeManager.clearCache();
     });
   }
 }

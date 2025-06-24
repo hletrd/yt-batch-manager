@@ -16,6 +16,9 @@ interface YouTubeAPI {
   openExternal: (url: string) => Promise<void>;
   getAvailableLanguages: () => Promise<{ languages: string[] }>;
   getCurrentLanguage: () => Promise<{ language: string }>;
+  selectCredentialsFile: () => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
+  removeStoredCredentials: () => Promise<{ success: boolean; error?: string }>;
+  clearCache: () => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {
@@ -114,8 +117,6 @@ class YouTubeBatchManager {
     const videoList = document.getElementById('video-list');
     if (!videoList) return;
 
-    const pathInfo = credentialsPath ? `<p><strong>${rendererI18n.t('credentials.expectedLocation')}</strong><br><code>${credentialsPath}</code></p>` : '';
-
     videoList.innerHTML = `
       <div class="credentials-error">
         <div class="error-icon">
@@ -126,23 +127,21 @@ class YouTubeBatchManager {
           </svg>
         </div>
         <h3>${rendererI18n.t('credentials.required')}</h3>
-        <p>${errorMessage.replace(/\n/g, '<br>')}</p>
-        ${pathInfo}
+        <p>${rendererI18n.t('credentials.pleaseSelectCredentials')}</p>
         <div class="credentials-help">
           <h4>${rendererI18n.t('credentials.setupInstructions')}</h4>
           <ol>
-            <li>${rendererI18n.t('credentials.step1')} <a href="#" onclick="window.youtubeAPI.openExternal?.('${rendererI18n.t('urls.googleCloudConsole')}') || alert('${rendererI18n.t('urls.pleaseVisit')}')">${rendererI18n.t('credentials.step1')}</a></li>
+            <li><a href="#" onclick="window.youtubeAPI.openExternal?.('${rendererI18n.t('urls.googleCloudConsole')}') || alert('${rendererI18n.t('urls.pleaseVisit')}')">${rendererI18n.t('credentials.step1')}</a></li>
             <li>${rendererI18n.t('credentials.step2')}</li>
             <li>${rendererI18n.t('credentials.step3')}</li>
             <li>${rendererI18n.t('credentials.step4')}</li>
             <li>${rendererI18n.t('credentials.step5')}</li>
             <li>${rendererI18n.t('credentials.step6')}</li>
-            <li>${rendererI18n.t('credentials.step7')}</li>
           </ol>
         </div>
         <div class="credentials-actions">
-          <button class="btn btn-primary" onclick="window.youtubeAPI.checkCredentials().then(result => { if (result.success) { location.reload(); } else { app.showStatus(result.error || '${rendererI18n.t('credentials.stillNoValidCredentials')}', 'error'); } })">
-            ${rendererI18n.t('buttons.checkAgain')}
+          <button class="btn btn-primary" onclick="app.selectCredentialsFile()">
+            ${rendererI18n.t('buttons.selectCredentialsFile')}
           </button>
         </div>
       </div>
@@ -696,6 +695,63 @@ class YouTubeBatchManager {
         console.log(`${this.state.changedVideos.size} videos have unsaved changes`);
       }
     }, 30000);
+  }
+
+  async removeSavedCredentials(): Promise<void> {
+    const confirmation = confirm(
+      `${rendererI18n.t('dialog.confirmRemoveCredentials')}\n\n${rendererI18n.t('dialog.confirmRemoveCredentialsMessage')}`
+    );
+
+    if (!confirmation) return;
+
+    try {
+      const result = await window.youtubeAPI.removeStoredCredentials();
+      if (result.success) {
+        this.showStatus(rendererI18n.t('credentials.credentialsRemovedSuccessfully'), 'success');
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+      } else {
+        this.showStatus(result.error || 'Error removing credentials', 'error');
+      }
+    } catch (error) {
+      this.showStatus('Error removing credentials', 'error');
+    }
+  }
+
+  async deleteCache(): Promise<void> {
+    const confirmation = confirm(
+      `${rendererI18n.t('dialog.confirmClearCache')}\n\n${rendererI18n.t('dialog.confirmClearCacheMessage')}`
+    );
+
+    if (!confirmation) return;
+
+    try {
+      const result = await window.youtubeAPI.clearCache();
+      if (result.success) {
+        this.showStatus(rendererI18n.t('credentials.cacheDeletedSuccessfully'), 'success');
+      } else {
+        this.showStatus(result.error || 'Error clearing cache', 'error');
+      }
+    } catch (error) {
+      this.showStatus('Error clearing cache', 'error');
+    }
+  }
+
+  async selectCredentialsFile(): Promise<void> {
+    try {
+      const result = await window.youtubeAPI.selectCredentialsFile();
+      if (result.success) {
+        this.showStatus(rendererI18n.t('credentials.credentialsSelectedSuccessfully'), 'success');
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+      } else if (!result.cancelled) {
+        this.showStatus(result.error || 'Error selecting credentials file', 'error');
+      }
+    } catch (error) {
+      this.showStatus('Error selecting credentials file', 'error');
+    }
   }
 
   private async initializeApp(): Promise<void> {

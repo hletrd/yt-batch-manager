@@ -14,7 +14,9 @@
     "saveAllCount": "모두 저장 ({count}개)",
     "updateVideoInfo": "동영상 정보 저장",
     "updating": "업데이트 중...",
-    "checkAgain": "다시 확인"
+    "removeSavedCredentials": "저장된 인증 정보 삭제",
+    "deleteCache": "썸네일 캐시 삭제",
+    "selectCredentialsFile": "인증 정보 파일 선택"
   },
   "navigation": {
     "sortBy": "정렬",
@@ -37,19 +39,22 @@
   },
   "credentials": {
     "required": "인증 정보 파일이 없습니다.",
-    "expectedLocation": "파일 위치:",
-    "setupInstructions": "가이드:",
+    "pleaseSelectCredentials": "YouTube 인증을 위해 credentials.json 파일을 선택해주세요.",
+    "setupInstructions": "가이드",
     "step1": "Google Cloud Console 페이지를 엽니다.",
     "step2": "새 프로젝트를 생성합니다. 상단 검색창에서 YouTube Data API v3를 검색하고 '사용' 버튼을 클릭해 활성화합니다.",
-    "step3": "상단 검색창에서 OAuth 동의 화면을 검색하여 페이지에 들어갑니다. 좌측 메뉴에서 '클라이언트'를 선택합니다. '클라이언트 만들기'를 클릭하고, 애플리케이션 유형을 '데스크톱 앱'으로 설정합니다.",
-    "step4": "클라이언트가 생성되었으면 'JSON 다운로드'를 클릭해 키 파일을 다운로드합니다. 다운로드한 JSON 파일의 이름을 `credentials.json`으로 변경하고 YT Batch Manager 실행 파일과 같은 위치에 넣습니다.",
-    "step5": "같은 페이지의 좌측 메뉴에서 '데이터 액세스'를 선택하고, '범위 추가 또는 삭제'를 클릭합니다. '직접 범위 추가'에 https://www.googleapis.com/auth/youtube\\nhttps://www.googleapis.com/auth/youtube.force-ssl을 입력하고 '테이블에 추가'를 클릭한 뒤 업데이트합니다.",
-    "step6": "좌측 메뉴에서 '대상'을 클릭하고, '테스트 사용자' 항목에 본인의 Gmail 계정을 추가합니다.",
-    "step7": "애플리케이션을 다시 시작하세요",
-    "credentialsNotFound": "credentials.json 파일을 {path}에서 찾을 수 없습니다.\\n다운로드한 credentials.json 파일을 앱과 같은 폴더에 저장하세요.",
+    "step3": "상단 검색창에서 OAuth 동의 화면을 검색하여 페이지에 들어갑니다. 좌측 메뉴에서 '클라이언트'를 선택합니다. '클라이언트 만들기'를 클릭하고, 애플리케이션 유형을 '데스크톱 앱'으로 설정합니다. 클라이언트가 생성되었으면 'JSON 다운로드'를 클릭해 키 파일을 다운로드합니다.",
+    "step4": "같은 페이지의 좌측 메뉴에서 '데이터 액세스'를 선택하고, '범위 추가 또는 삭제'를 클릭합니다. '직접 범위 추가'에 <br><code>https://www.googleapis.com/auth/youtube</code><br/><code>https://www.googleapis.com/auth/youtube.force-ssl</code><br>을 입력하고 '테이블에 추가'를 클릭한 뒤 업데이트합니다.",
+    "step5": "좌측 메뉴에서 '대상'을 클릭하고, '테스트 사용자' 항목에 본인의 Gmail 계정을 추가합니다.",
+    "step6": "아래의 선택 버튼을 클릭하고 다운로드한 앞서 다운로드한 키 파일을 선택합니다.",
+    "credentialsNotFound": "credentials.json 파일을 {path}에서 찾을 수 없습니다.",
     "credentialsMissingFields": "credentials.json 파일이 잘못되었습니다.",
     "credentialsInvalid": "credentials.json 파일이 유효하지 않거나 손상되었습니다. Google Cloud Console에서 새 파일을 다운로드하세요.",
-    "stillNoValidCredentials": "유효한 인증 정보를 찾을 수 없습니다"
+    "stillNoValidCredentials": "유효한 인증 정보를 찾을 수 없습니다",
+    "selectCredentialsFile": "credentials.json 파일 선택",
+    "credentialsSelectedSuccessfully": "인증 정보 파일이 성공적으로 선택되었습니다",
+    "credentialsRemovedSuccessfully": "저장된 인증 정보가 성공적으로 삭제되었습니다",
+    "cacheDeletedSuccessfully": "캐시가 성공적으로 삭제되었습니다"
   },
   "authentication": {
     "successful": "인증에 성공했습니다.",
@@ -125,7 +130,11 @@
     "unsavedChangesWarning": "{count}개의 저장되지 않은 변경사항이 있습니다. 정말 종료하시겠습니까?",
     "jsonFiles": "JSON 파일",
     "allFiles": "모든 파일",
-    "fileSavePrompt": "동영상 정보 저장"
+    "fileSavePrompt": "동영상 정보 저장",
+    "confirmRemoveCredentials": "저장된 인증 정보를 삭제하시겠습니까?",
+    "confirmRemoveCredentialsMessage": "저장된 인증 정보와 인증 토큰이 삭제됩니다. 다시 인증하려면 새로운 인증 정보 파일을 선택해야 합니다. 삭제한 인증 정보는 복구할 수 없습니다.",
+    "confirmClearCache": "캐시를 삭제하시겠습니까?",
+    "confirmClearCacheMessage": "캐시에 저장된 모든 썸네일이 삭제됩니다. 썸네일은 필요할 때 다시 다운로드됩니다."
   },
   "urls": {
     "googleCloudConsole": "https://console.cloud.google.com/",

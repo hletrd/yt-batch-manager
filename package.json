@@ -1,6 +1,6 @@
 {
   "name": "yt-batch-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "YouTube Batch Manager",
   "type": "module",
   "main": "dist/main.js",

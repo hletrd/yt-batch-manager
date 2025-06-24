@@ -14,7 +14,9 @@
         "saveAllCount": "Save All ({count})",
         "updateVideoInfo": "Update Video Info",
         "updating": "Updating...",
-        "checkAgain": "Check Again"
+        "removeSavedCredentials": "Remove Saved Credentials",
+        "deleteCache": "Delete Thumbnail Cache",
+        "selectCredentialsFile": "Select Credentials File"
     },
     "navigation": {
         "sortBy": "Sort by",
@@ -37,19 +39,22 @@
     },
     "credentials": {
         "required": "Credentials Required",
-        "expectedLocation": "Expected location:",
-        "setupInstructions": "Setup Instructions:",
-        "step1": "Go to Google Cloud Console",
-        "step2": "Create a new project or select an existing one",
-        "step3": "Enable the YouTube Data API v3",
-        "step4": "Create OAuth 2.0 credentials for a desktop application",
-        "step5": "Download the credentials JSON file",
-        "step6": "Rename it to credentials.json and place it in the app directory",
-        "step7": "Restart the application",
-        "credentialsNotFound": "credentials.json not found at: {path}\\nPlease download it from Google Cloud Console and place it in the same directory as the app.",
+        "pleaseSelectCredentials": "Please select your credentials.json file to authenticate with YouTube.",
+        "setupInstructions": "Setup Instructions",
+        "step1": "Go to Google Cloud Console.",
+        "step2": "Create a new project or select an existing one.",
+        "step3": "Enable the YouTube Data API v3.",
+        "step4": "Create OAuth 2.0 credentials for a desktop application.",
+        "step5": "Download the credentials JSON file.",
+        "step6": "Click the select button below to select the credentials.json file.",
+        "credentialsNotFound": "credentials.json not found at: {path}",
         "credentialsMissingFields": "credentials.json is missing required fields. Please ensure you downloaded the correct OAuth 2.0 client credentials for a desktop application.",
         "credentialsInvalid": "credentials.json is invalid or corrupted. Please download a new copy from Google Cloud Console.",
-        "stillNoValidCredentials": "Still no valid credentials found"
+        "stillNoValidCredentials": "Still no valid credentials found",
+        "selectCredentialsFile": "Select credentials.json file",
+        "credentialsSelectedSuccessfully": "Credentials file selected successfully",
+        "credentialsRemovedSuccessfully": "Stored credentials removed successfully",
+        "cacheDeletedSuccessfully": "Cache deleted successfully"
     },
     "authentication": {
         "successful": "Authentication Successful!",
@@ -84,8 +89,8 @@
         "videoUpdatedSuccessfully": "Video updated successfully!",
         "updatedSuccessfully": "Updated successfully!",
         "saving": "Saving...",
-        "failedToUpdateVideo": "Failed to update video",
-        "errorUpdatingVideo": "Error updating video",
+        "failedToUpdateVideo": "Failed to update video info",
+        "errorUpdatingVideo": "Error updating video info",
         "fileSelectionCancelled": "File selection cancelled",
         "failedToLoadVideosFromFile": "Failed to load video infos from file",
         "videosLoadedSuccessfully": "{count} video infos loaded successfully!",
@@ -125,7 +130,11 @@
         "unsavedChangesWarning": "You have {count} unsaved changes. Are you sure you want to close the application?",
         "jsonFiles": "JSON Files",
         "allFiles": "All Files",
-        "fileSavePrompt": "Save video info as"
+        "fileSavePrompt": "Save video info as",
+        "confirmRemoveCredentials": "Are you sure you want to remove saved credentials?",
+        "confirmRemoveCredentialsMessage": "This will delete your stored credentials and authentication tokens. You will need to select a new credentials file to authenticate again. This action is irreversible.",
+        "confirmClearCache": "Are you sure you want to delete the cache?",
+        "confirmClearCacheMessage": "This will delete all cached thumbnails. Thumbnails will be re-downloaded when needed."
     },
     "urls": {
         "googleCloudConsole": "https://console.cloud.google.com/",

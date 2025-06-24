@@ -501,6 +501,18 @@
     .no-videos p {
       font-size: 16px;
       font-weight: 500;
+      margin-bottom: 32px;
+    }
+
+    .no-videos-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .no-videos-actions .btn {
+      min-width: 160px;
     }
 
     .header-right {
@@ -892,6 +904,10 @@
       <div class="no-videos">
         <h3 data-i18n="app.noVideosLoaded">No videos loaded</h3>
         <p data-i18n="app.noVideosLoadedDescription">Click "Load from YouTube" to fetch your videos, or "Load from File" to load a previous backup.</p>
+        <div class="no-videos-actions">
+          <button class="btn btn-secondary" onclick="app.removeSavedCredentials()" data-i18n="buttons.removeSavedCredentials">Remove Saved Credentials</button>
+          <button class="btn btn-secondary" onclick="app.deleteCache()" data-i18n="buttons.deleteCache">Delete Cache</button>
+        </div>
       </div>
     </div>
   </div>

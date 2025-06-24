@@ -16,6 +16,9 @@ interface YouTubeAPI {
   openExternal: (url: string) => Promise<void>;
   getAvailableLanguages: () => Promise<{ languages: string[] }>;
   getCurrentLanguage: () => Promise<{ language: string }>;
+  selectCredentialsFile: () => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
+  removeStoredCredentials: () => Promise<{ success: boolean; error?: string }>;
+  clearCache: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const youtubeAPI: YouTubeAPI = {
@@ -34,6 +37,9 @@ const youtubeAPI: YouTubeAPI = {
   openExternal: (url) => shell.openExternal(url),
   getAvailableLanguages: () => ipcRenderer.invoke('i18n:get-available-languages'),
   getCurrentLanguage: () => ipcRenderer.invoke('i18n:get-current-language'),
+  selectCredentialsFile: () => ipcRenderer.invoke('youtube:select-credentials-file'),
+  removeStoredCredentials: () => ipcRenderer.invoke('youtube:remove-stored-credentials'),
+  clearCache: () => ipcRenderer.invoke('youtube:clear-cache'),
 };
 
 contextBridge.exposeInMainWorld('youtubeAPI', youtubeAPI);
