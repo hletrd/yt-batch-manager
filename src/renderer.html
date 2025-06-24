@@ -686,6 +686,99 @@
       }
     }
 
+    .find-bar {
+      position: fixed;
+      top: 88px;
+      right: 20px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      min-width: 300px;
+      transition: all 0.3s ease;
+    }
+
+    .find-bar.hidden {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+    }
+
+    .find-content {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      gap: 8px;
+    }
+
+    .find-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .find-input:focus {
+      border-color: var(--accent-primary);
+      background: var(--bg-primary);
+    }
+
+    .find-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .find-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .find-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .find-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .find-close {
+      margin-left: 4px;
+    }
+
+    .find-results {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin: 0 8px;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .find-bar {
+        right: 16px;
+        left: 16px;
+        min-width: unset;
+      }
+    }
+
     @media (max-width: 480px) {
       .header {
         padding: 10px 14px;
@@ -913,6 +1006,31 @@
   </div>
 
   <div id="status-message" class="status-message"></div>
+
+  <div id="find-bar" class="find-bar hidden">
+    <div class="find-content">
+      <input type="text" id="find-input" class="find-input" placeholder="Find in page..." />
+      <div class="find-controls">
+        <button id="find-previous" class="find-btn" title="Previous (Shift+F3)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15,18 9,12 15,6"></polyline>
+          </svg>
+        </button>
+        <button id="find-next" class="find-btn" title="Next (F3)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9,18 15,12 9,6"></polyline>
+          </svg>
+        </button>
+        <span id="find-results" class="find-results"></span>
+        <button id="find-close" class="find-btn find-close" title="Close (Escape)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="../dist/renderer.js"></script>
 </body>

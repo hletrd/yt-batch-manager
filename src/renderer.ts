@@ -24,6 +24,12 @@ interface YouTubeAPI {
 declare global {
   interface Window {
     youtubeAPI: YouTubeAPI;
+    electronAPI: {
+      ipcRenderer: {
+        on: (channel: string, func: (...args: any[]) => void) => void;
+        removeAllListeners: (channel: string) => void;
+      };
+    };
   }
 }
 
@@ -53,6 +59,24 @@ interface AppState {
   isLoading: boolean;
 }
 
+interface FindResult {
+  activeMatchOrdinal: number;
+  matches: number;
+  currentMatch?: {
+    element: HTMLElement;
+    videoId: string;
+    type: 'title' | 'description';
+  };
+}
+
+interface SearchMatch {
+  element: HTMLInputElement | HTMLTextAreaElement;
+  videoId: string;
+  type: 'title' | 'description';
+  text: string;
+  index: number;
+}
+
 class YouTubeBatchManager {
   private state: AppState = {
     changedVideos: new Set(),
@@ -64,9 +88,15 @@ class YouTubeBatchManager {
     isLoading: false,
   };
 
+  private currentSearchText: string = '';
+  private searchMatches: SearchMatch[] = [];
+  private currentMatchIndex: number = -1;
+  private findBarVisible: boolean = false;
+
   constructor() {
     this.initializeTheme();
     this.setupEventListeners();
+    this.setupFindListeners();
     this.initializeApp();
   }
 
@@ -623,6 +653,10 @@ class YouTubeBatchManager {
             this.autoResizeTextarea(textarea);
           }
           this.updateTitleCounter(video.id);
+
+          if (this.findBarVisible) {
+            this.setupInputEditListenersForVideo(video.id);
+          }
         }, 10);
       });
     });
@@ -774,6 +808,344 @@ class YouTubeBatchManager {
       }
     } catch (error) {
       this.showStatus('Error selecting credentials file', 'error');
+    }
+  }
+
+  private setupFindListeners(): void {
+    window.electronAPI.ipcRenderer.on('show-find', () => {
+      this.showFindBar();
+    });
+
+    window.electronAPI.ipcRenderer.on('hide-find', () => {
+      this.hideFindBar();
+    });
+
+    window.electronAPI.ipcRenderer.on('find-next', () => {
+      this.findNext();
+    });
+
+    window.electronAPI.ipcRenderer.on('find-previous', () => {
+      this.findPrevious();
+    });
+
+    const findInput = document.getElementById('find-input') as HTMLInputElement;
+    const findNext = document.getElementById('find-next') as HTMLButtonElement;
+    const findPrevious = document.getElementById('find-previous') as HTMLButtonElement;
+    const findClose = document.getElementById('find-close') as HTMLButtonElement;
+
+    if (findInput) {
+      findInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.currentSearchText = target.value;
+        if (target.value) {
+          this.performFind(target.value);
+        } else {
+          this.clearFind();
+        }
+      });
+
+      findInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            this.findPrevious();
+          } else {
+            this.findNext();
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          this.hideFindBar();
+        }
+      });
+    }
+
+    if (findNext) {
+      findNext.addEventListener('click', () => this.findNext());
+    }
+
+    if (findPrevious) {
+      findPrevious.addEventListener('click', () => this.findPrevious());
+    }
+
+    if (findClose) {
+      findClose.addEventListener('click', () => this.hideFindBar());
+    }
+  }
+
+      private showFindBar(): void {
+    const findBar = document.getElementById('find-bar');
+    const findInput = document.getElementById('find-input') as HTMLInputElement;
+
+    if (findBar) {
+      findBar.classList.remove('hidden');
+      this.findBarVisible = true;
+      this.setupInputEditListeners();
+
+      setTimeout(() => {
+        if (findInput && this.findBarVisible) {
+          findInput.focus();
+          findInput.select();
+        }
+      }, 50);
+    }
+  }
+
+  private hideFindBar(): void {
+    const findBar = document.getElementById('find-bar');
+
+    if (findBar) {
+      findBar.classList.add('hidden');
+      this.findBarVisible = false;
+      this.removeInputEditListeners();
+      this.clearFind();
+    }
+  }
+
+  private setupInputEditListeners(): void {
+    const titleInputs = document.querySelectorAll('input[id^="title-"]') as NodeListOf<HTMLInputElement>;
+    const descriptionTextareas = document.querySelectorAll('textarea[id^="description-"]') as NodeListOf<HTMLTextAreaElement>;
+
+    const handleInputEdit = () => {
+      if (this.findBarVisible) {
+        setTimeout(() => {
+          const findInput = document.getElementById('find-input') as HTMLInputElement;
+          if (findInput && this.findBarVisible) {
+            findInput.focus();
+          }
+        }, 50);
+      }
+    };
+
+    titleInputs.forEach(input => {
+      input.addEventListener('input', handleInputEdit);
+      input.addEventListener('keydown', handleInputEdit);
+      (input as any)._findEditHandler = handleInputEdit;
+    });
+
+    descriptionTextareas.forEach(textarea => {
+      textarea.addEventListener('input', handleInputEdit);
+      textarea.addEventListener('keydown', handleInputEdit);
+      (textarea as any)._findEditHandler = handleInputEdit;
+    });
+  }
+
+  private setupInputEditListenersForVideo(videoId: string): void {
+    const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
+    const descriptionTextarea = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+
+    const handleInputEdit = () => {
+      if (this.findBarVisible) {
+        setTimeout(() => {
+          const findInput = document.getElementById('find-input') as HTMLInputElement;
+          if (findInput && this.findBarVisible) {
+            findInput.focus();
+          }
+        }, 50);
+      }
+    };
+
+    if (titleInput && !(titleInput as any)._findEditHandler) {
+      titleInput.addEventListener('input', handleInputEdit);
+      titleInput.addEventListener('keydown', handleInputEdit);
+      (titleInput as any)._findEditHandler = handleInputEdit;
+    }
+
+    if (descriptionTextarea && !(descriptionTextarea as any)._findEditHandler) {
+      descriptionTextarea.addEventListener('input', handleInputEdit);
+      descriptionTextarea.addEventListener('keydown', handleInputEdit);
+      (descriptionTextarea as any)._findEditHandler = handleInputEdit;
+    }
+  }
+
+  private removeInputEditListeners(): void {
+    const titleInputs = document.querySelectorAll('input[id^="title-"]') as NodeListOf<HTMLInputElement>;
+    const descriptionTextareas = document.querySelectorAll('textarea[id^="description-"]') as NodeListOf<HTMLTextAreaElement>;
+
+    titleInputs.forEach(input => {
+      const handler = (input as any)._findEditHandler;
+      if (handler) {
+        input.removeEventListener('input', handler);
+        input.removeEventListener('keydown', handler);
+        delete (input as any)._findEditHandler;
+      }
+    });
+
+    descriptionTextareas.forEach(textarea => {
+      const handler = (textarea as any)._findEditHandler;
+      if (handler) {
+        textarea.removeEventListener('input', handler);
+        textarea.removeEventListener('keydown', handler);
+        delete (textarea as any)._findEditHandler;
+      }
+    });
+  }
+
+    private performFind(text: string): void {
+    if (!text.trim()) {
+      this.clearFind();
+      return;
+    }
+
+    this.searchMatches = [];
+    this.currentMatchIndex = -1;
+
+    const titleInputs = document.querySelectorAll('input[id^="title-"]') as NodeListOf<HTMLInputElement>;
+    const descriptionTextareas = document.querySelectorAll('textarea[id^="description-"]') as NodeListOf<HTMLTextAreaElement>;
+
+    titleInputs.forEach((input) => {
+      const videoId = input.id.replace('title-', '');
+      const inputText = input.value.toLowerCase();
+      const searchText = text.toLowerCase();
+
+      if (inputText.includes(searchText)) {
+        this.searchMatches.push({
+          element: input,
+          videoId,
+          type: 'title',
+          text: input.value,
+          index: inputText.indexOf(searchText)
+        });
+      }
+    });
+
+    descriptionTextareas.forEach((textarea) => {
+      const videoId = textarea.id.replace('description-', '');
+      const textareaText = textarea.value.toLowerCase();
+      const searchText = text.toLowerCase();
+
+      if (textareaText.includes(searchText)) {
+        this.searchMatches.push({
+          element: textarea,
+          videoId,
+          type: 'description',
+          text: textarea.value,
+          index: textareaText.indexOf(searchText)
+        });
+      }
+    });
+
+    this.searchMatches.sort((a, b) => {
+      const aPosition = Array.from(document.querySelectorAll('[data-video-id]')).findIndex(el => el.getAttribute('data-video-id') === a.videoId);
+      const bPosition = Array.from(document.querySelectorAll('[data-video-id]')).findIndex(el => el.getAttribute('data-video-id') === b.videoId);
+
+      if (aPosition !== bPosition) {
+        return aPosition - bPosition;
+      }
+
+      if (a.type === 'title' && b.type === 'description') return -1;
+      if (a.type === 'description' && b.type === 'title') return 1;
+
+      return 0;
+    });
+
+    if (this.searchMatches.length > 0) {
+      this.currentMatchIndex = 0;
+      this.highlightCurrentMatch();
+    } else {
+      setTimeout(() => {
+        const findInput = document.getElementById('find-input') as HTMLInputElement;
+        if (findInput && this.findBarVisible) {
+          findInput.focus();
+        }
+      }, 50);
+    }
+
+    this.updateFindResults({
+      activeMatchOrdinal: this.searchMatches.length > 0 ? 1 : 0,
+      matches: this.searchMatches.length,
+      currentMatch: this.searchMatches.length > 0 ? {
+        element: this.searchMatches[0].element,
+        videoId: this.searchMatches[0].videoId,
+        type: this.searchMatches[0].type
+      } : undefined
+    });
+  }
+
+  private findNext(): void {
+    if (!this.currentSearchText || this.searchMatches.length === 0) return;
+
+    this.currentMatchIndex = (this.currentMatchIndex + 1) % this.searchMatches.length;
+    this.highlightCurrentMatch();
+    this.updateFindResults({
+      activeMatchOrdinal: this.currentMatchIndex + 1,
+      matches: this.searchMatches.length,
+      currentMatch: {
+        element: this.searchMatches[this.currentMatchIndex].element,
+        videoId: this.searchMatches[this.currentMatchIndex].videoId,
+        type: this.searchMatches[this.currentMatchIndex].type
+      }
+    });
+  }
+
+  private findPrevious(): void {
+    if (!this.currentSearchText || this.searchMatches.length === 0) return;
+
+    this.currentMatchIndex = this.currentMatchIndex <= 0 ? this.searchMatches.length - 1 : this.currentMatchIndex - 1;
+    this.highlightCurrentMatch();
+    this.updateFindResults({
+      activeMatchOrdinal: this.currentMatchIndex + 1,
+      matches: this.searchMatches.length,
+      currentMatch: {
+        element: this.searchMatches[this.currentMatchIndex].element,
+        videoId: this.searchMatches[this.currentMatchIndex].videoId,
+        type: this.searchMatches[this.currentMatchIndex].type
+      }
+    });
+  }
+
+    private highlightCurrentMatch(): void {
+    if (this.currentMatchIndex < 0 || this.currentMatchIndex >= this.searchMatches.length) return;
+
+    const match = this.searchMatches[this.currentMatchIndex];
+    const element = match.element;
+
+    const videoElement = element.closest('[data-video-id]');
+    if (videoElement) {
+      videoElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    const searchText = this.currentSearchText.toLowerCase();
+    const elementText = element.value.toLowerCase();
+    const startIndex = elementText.indexOf(searchText);
+
+    if (startIndex !== -1) {
+      element.focus();
+      element.setSelectionRange(startIndex, startIndex + this.currentSearchText.length);
+
+      setTimeout(() => {
+        const findInput = document.getElementById('find-input') as HTMLInputElement;
+        if (findInput && this.findBarVisible) {
+          findInput.focus();
+        }
+      }, 100);
+    }
+  }
+
+  private clearFind(): void {
+    this.searchMatches = [];
+    this.currentMatchIndex = -1;
+    this.updateFindResults({ activeMatchOrdinal: 0, matches: 0 });
+  }
+
+  private updateFindResults(result: FindResult): void {
+    const findResults = document.getElementById('find-results');
+    const findNext = document.getElementById('find-next') as HTMLButtonElement;
+    const findPrevious = document.getElementById('find-previous') as HTMLButtonElement;
+
+    if (findResults) {
+      if (result.matches === 0) {
+        findResults.textContent = 'No results';
+      } else if (result.matches === 1) {
+        findResults.textContent = '1 result';
+      } else {
+        findResults.textContent = `${result.activeMatchOrdinal}/${result.matches}`;
+      }
+    }
+
+    if (findNext && findPrevious) {
+      const hasResults = result.matches > 0;
+      findNext.disabled = !hasResults;
+      findPrevious.disabled = !hasResults;
     }
   }
 

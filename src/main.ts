@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, screen, globalShortcut } from 'electron';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs/promises';
@@ -616,6 +616,7 @@ class YouTubeManager {
 class ElectronApp {
   private mainWindow: BrowserWindow | null = null;
   private youtubeManager: YouTubeManager;
+  private findVisible: boolean = false;
 
   constructor() {
     this.youtubeManager = new YouTubeManager();
@@ -627,9 +628,11 @@ class ElectronApp {
       await i18n.initialize();
       this.createWindow();
       this.setupIpcHandlers();
+      this.registerGlobalShortcuts();
     });
 
     app.on('window-all-closed', () => {
+      globalShortcut.unregisterAll();
       app.quit();
     });
 
@@ -638,6 +641,62 @@ class ElectronApp {
         this.createWindow();
       }
     });
+
+    app.on('will-quit', () => {
+      globalShortcut.unregisterAll();
+    });
+  }
+
+  private registerGlobalShortcuts(): void {
+    globalShortcut.register('CommandOrControl+F', () => {
+      this.toggleFind();
+    });
+
+    globalShortcut.register('F3', () => {
+      this.findNext();
+    });
+
+    globalShortcut.register('Shift+F3', () => {
+      this.findPrevious();
+    });
+
+    globalShortcut.register('Escape', () => {
+      this.closeFind();
+    });
+  }
+
+  private toggleFind(): void {
+    if (!this.mainWindow) return;
+
+    if (this.findVisible) {
+      this.closeFind();
+    } else {
+      this.showFind();
+    }
+  }
+
+  private showFind(): void {
+    if (!this.mainWindow) return;
+
+    this.findVisible = true;
+    this.mainWindow.webContents.send('show-find');
+  }
+
+    private closeFind(): void {
+    if (!this.mainWindow) return;
+
+    this.findVisible = false;
+    this.mainWindow.webContents.send('hide-find');
+  }
+
+  private findNext(): void {
+    if (!this.mainWindow || !this.findVisible) return;
+    this.mainWindow.webContents.send('find-next');
+  }
+
+  private findPrevious(): void {
+    if (!this.mainWindow || !this.findVisible) return;
+    this.mainWindow.webContents.send('find-previous');
   }
 
   private createWindow(): void {
@@ -934,6 +993,8 @@ class ElectronApp {
     ipcMain.handle('youtube:clear-cache', async () => {
       return await this.youtubeManager.clearCache();
     });
+
+
   }
 }
 

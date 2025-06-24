@@ -42,4 +42,22 @@ const youtubeAPI: YouTubeAPI = {
   clearCache: () => ipcRenderer.invoke('youtube:clear-cache'),
 };
 
+const electronAPI = {
+  ipcRenderer: {
+    on: (channel: string, func: (...args: any[]) => void) => {
+      const validChannels = ['show-find', 'hide-find', 'find-next', 'find-previous', 'find-result'];
+      if (validChannels.includes(channel)) {
+        ipcRenderer.on(channel, func);
+      }
+    },
+    removeAllListeners: (channel: string) => {
+      const validChannels = ['show-find', 'hide-find', 'find-next', 'find-previous', 'find-result'];
+      if (validChannels.includes(channel)) {
+        ipcRenderer.removeAllListeners(channel);
+      }
+    }
+  }
+};
+
 contextBridge.exposeInMainWorld('youtubeAPI', youtubeAPI);
+contextBridge.exposeInMainWorld('electronAPI', electronAPI);
