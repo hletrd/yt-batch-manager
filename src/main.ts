@@ -623,11 +623,14 @@ class ElectronApp {
       },
       titleBarStyle: 'default',
       show: false,
+      autoHideMenuBar: true,
     });
 
     if (windowState.isMaximized) {
       this.mainWindow.maximize();
     }
+
+    this.mainWindow.setMenuBarVisibility(false);
 
     this.setupWindowStateTracking();
 
