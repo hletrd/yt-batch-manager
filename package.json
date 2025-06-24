@@ -1,12 +1,15 @@
 {
   "name": "yt-batch-manager",
   "version": "1.0.0",
-  "description": "YouTube Batch Manager - Electron TypeScript Application",
+  "description": "YouTube Batch Manager",
+  "type": "module",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "start": "npm run build && electron .",
+    "start:ko": "npm run build && electron . --lang=ko",
     "dev": "concurrently \"tsc -w\" \"wait-on dist/main.js && electron . --dev\"",
+    "dev:ko": "concurrently \"tsc -w\" \"wait-on dist/main.js && electron . --dev --lang=ko\"",
     "pack": "electron-builder",
     "dist": "electron-builder --publish=never",
     "clean": "rimraf dist",
@@ -14,16 +17,15 @@
     "build:win:x64": "npm run build && electron-builder --win --x64 --publish=never",
     "build:win:arm64": "npm run build && electron-builder --win --arm64 --publish=never",
     "build:mac": "npm run build && electron-builder --mac --universal --publish=never",
-    "build:mac:universal": "npm run build && electron-builder --mac --universal --publish=never",
-    "build:all": "npm run build && electron-builder --win --mac --linux --publish=never"
+    "build:all": "npm run build && electron-builder --win --mac --publish=never"
   },
   "keywords": ["youtube", "batch", "manager", "electron", "typescript"],
   "author": "YT Batch Manager",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^24.0.3",
-    "@typescript-eslint/eslint-plugin": "^8.34.1",
-    "@typescript-eslint/parser": "^8.34.1",
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
     "concurrently": "^9.2.0",
     "electron": "^36.5.0",
     "electron-builder": "^26.0.12",
