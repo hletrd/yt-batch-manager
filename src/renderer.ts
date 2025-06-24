@@ -92,6 +92,8 @@ class YouTubeBatchManager {
   private searchMatches: SearchMatch[] = [];
   private currentMatchIndex: number = -1;
   private findBarVisible: boolean = false;
+  private saveInProgress: Set<string> = new Set();
+  private batchSaveInProgress: boolean = false;
 
   constructor() {
     this.initializeTheme();
@@ -209,6 +211,20 @@ class YouTubeBatchManager {
     }
   }
 
+  private hasCurrentChanges(videoId: string, savedTitle: string, savedDescription: string): boolean {
+    const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
+    const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+    const originalVideo = this.state.allVideos.find(v => v.id === videoId);
+
+    if (!titleInput || !descriptionInput || !originalVideo) return false;
+
+    const currentTitle = titleInput.value;
+    const currentDescription = descriptionInput.value;
+
+    return (currentTitle !== savedTitle || currentDescription !== savedDescription) &&
+           (currentTitle !== originalVideo.title || currentDescription !== originalVideo.description);
+  }
+
   private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
     const scrollTop = textarea.scrollTop;
     textarea.style.height = 'auto';
@@ -252,14 +268,23 @@ class YouTubeBatchManager {
     saveAllBtn.disabled = true;
     saveAllBtn.innerHTML = 'Saving...';
 
+    this.batchSaveInProgress = true;
+
+    const savedData = new Map<string, {title: string, description: string}>();
+
     const updates = Array.from(this.state.changedVideos).map(videoId => {
       const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
       const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
 
+      const title = titleInput.value;
+      const description = descriptionInput.value;
+
+      savedData.set(videoId, { title, description });
+
       return {
         video_id: videoId,
-        title: titleInput.value,
-        description: descriptionInput.value,
+        title,
+        description,
       };
     });
 
@@ -279,53 +304,60 @@ class YouTubeBatchManager {
         }
 
         const successfulUpdates = result.results?.successful || [];
+        const processedVideos = new Set<string>();
+
         if (successfulUpdates.length > 0) {
           successfulUpdates.forEach((update: { video_id: string; title: string }) => {
             const videoId = update.video_id;
-            const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
-            const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+            const saved = savedData.get(videoId);
+            if (!saved) return;
 
-            if (titleInput) {
-              const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
-              if (videoTitleEl) {
-                videoTitleEl.textContent = titleInput.value;
-              }
+            processedVideos.add(videoId);
 
-              const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
-              if (videoIndex !== -1) {
-                this.state.allVideos[videoIndex].title = titleInput.value;
-                if (descriptionInput) {
-                  this.state.allVideos[videoIndex].description = descriptionInput.value;
-                }
-              }
+            const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
+            if (videoTitleEl) {
+              videoTitleEl.textContent = saved.title;
+            }
+
+            const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
+            if (videoIndex !== -1) {
+              this.state.allVideos[videoIndex].title = saved.title;
+              this.state.allVideos[videoIndex].description = saved.description;
             }
           });
         } else {
           Array.from(this.state.changedVideos).forEach((videoId: string) => {
-            const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
-            const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+            const saved = savedData.get(videoId);
+            if (!saved) return;
 
-            if (titleInput) {
-              const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
-              if (videoTitleEl) {
-                videoTitleEl.textContent = titleInput.value;
-              }
+            processedVideos.add(videoId);
 
-              const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
-              if (videoIndex !== -1) {
-                this.state.allVideos[videoIndex].title = titleInput.value;
-                if (descriptionInput) {
-                  this.state.allVideos[videoIndex].description = descriptionInput.value;
-                }
-              }
+            const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
+            if (videoTitleEl) {
+              videoTitleEl.textContent = saved.title;
+            }
+
+            const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
+            if (videoIndex !== -1) {
+              this.state.allVideos[videoIndex].title = saved.title;
+              this.state.allVideos[videoIndex].description = saved.description;
             }
           });
         }
 
-        this.state.changedVideos.clear();
-        document.querySelectorAll('[id^="update-btn-"]').forEach(btn => {
-          (btn as HTMLElement).style.display = 'none';
+        processedVideos.forEach(videoId => {
+          const saved = savedData.get(videoId);
+          if (!saved) return;
+
+          if (!this.hasCurrentChanges(videoId, saved.title, saved.description)) {
+            this.state.changedVideos.delete(videoId);
+            const updateBtn = document.getElementById(`update-btn-${videoId}`);
+            if (updateBtn) {
+              updateBtn.style.display = 'none';
+            }
+          }
         });
+
         this.updateSaveAllButton();
       } else {
         this.showStatus(rendererI18n.t('status.failedToUpdateVideo'), 'error');
@@ -336,6 +368,7 @@ class YouTubeBatchManager {
     } finally {
       saveAllBtn.disabled = false;
       saveAllBtn.innerHTML = originalText;
+      this.batchSaveInProgress = false;
     }
   }
 
@@ -515,29 +548,37 @@ class YouTubeBatchManager {
     updateBtn.disabled = true;
     updateBtn.textContent = 'Updating...';
 
+    this.saveInProgress.add(videoId);
+
+    const savedTitle = titleInput.value;
+    const savedDescription = descriptionInput.value;
+
     try {
       const result = await window.youtubeAPI.updateVideo({
         video_id: videoId,
-        title: titleInput.value,
-        description: descriptionInput.value,
+        title: savedTitle,
+        description: savedDescription,
       });
 
       if (result.success) {
         this.showStatus(rendererI18n.t('status.videoUpdatedSuccessfully'), 'success');
-        this.state.changedVideos.delete(videoId);
-        updateBtn.style.display = 'none';
-        this.updateSaveAllButton();
 
         const videoTitleEl = document.querySelector(`[data-video-id="${videoId}"] .video-title`);
         if (videoTitleEl) {
-          videoTitleEl.textContent = titleInput.value;
+          videoTitleEl.textContent = savedTitle;
         }
 
         const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
         if (videoIndex !== -1) {
-          this.state.allVideos[videoIndex].title = titleInput.value;
-          this.state.allVideos[videoIndex].description = descriptionInput.value;
+          this.state.allVideos[videoIndex].title = savedTitle;
+          this.state.allVideos[videoIndex].description = savedDescription;
         }
+
+        if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription)) {
+          this.state.changedVideos.delete(videoId);
+          updateBtn.style.display = 'none';
+        }
+        this.updateSaveAllButton();
       } else {
         this.showStatus(rendererI18n.t('status.failedToUpdateVideo'), 'error');
       }
@@ -547,6 +588,7 @@ class YouTubeBatchManager {
     } finally {
       updateBtn.disabled = false;
       updateBtn.textContent = 'Update Video';
+      this.saveInProgress.delete(videoId);
     }
   }
 
@@ -847,10 +889,17 @@ class YouTubeBatchManager {
       findInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          if (e.shiftKey) {
-            this.findPrevious();
-          } else {
-            this.findNext();
+          const currentValue = (e.target as HTMLInputElement).value;
+          if (currentValue.trim()) {
+            if (this.searchMatches.length > 0) {
+              if (e.shiftKey) {
+                this.findPrevious();
+              } else {
+                this.findNext();
+              }
+            } else {
+              this.performFind(currentValue);
+            }
           }
         } else if (e.key === 'Escape') {
           e.preventDefault();
@@ -872,13 +921,16 @@ class YouTubeBatchManager {
     }
   }
 
-      private showFindBar(): void {
+    private showFindBar(): void {
     const findBar = document.getElementById('find-bar');
     const findInput = document.getElementById('find-input') as HTMLInputElement;
 
     if (findBar) {
       findBar.classList.remove('hidden');
       this.findBarVisible = true;
+
+      rendererI18n.updatePageTexts();
+
       this.setupInputEditListeners();
 
       setTimeout(() => {
@@ -886,7 +938,7 @@ class YouTubeBatchManager {
           findInput.focus();
           findInput.select();
         }
-      }, 50);
+      }, 200);
     }
   }
 
@@ -898,6 +950,15 @@ class YouTubeBatchManager {
       this.findBarVisible = false;
       this.removeInputEditListeners();
       this.clearFind();
+
+      document.querySelectorAll('.search-highlight-container').forEach(el => {
+        el.classList.remove('search-highlight-container');
+      });
+      document.querySelectorAll('[data-search-highlight]').forEach(el => {
+        el.removeAttribute('data-search-highlight');
+        el.removeAttribute('data-search-text');
+        el.classList.remove('search-text-match');
+      });
     }
   }
 
@@ -907,12 +968,7 @@ class YouTubeBatchManager {
 
     const handleInputEdit = () => {
       if (this.findBarVisible) {
-        setTimeout(() => {
-          const findInput = document.getElementById('find-input') as HTMLInputElement;
-          if (findInput && this.findBarVisible) {
-            findInput.focus();
-          }
-        }, 50);
+        this.hideFindBar();
       }
     };
 
@@ -935,12 +991,7 @@ class YouTubeBatchManager {
 
     const handleInputEdit = () => {
       if (this.findBarVisible) {
-        setTimeout(() => {
-          const findInput = document.getElementById('find-input') as HTMLInputElement;
-          if (findInput && this.findBarVisible) {
-            findInput.focus();
-          }
-        }, 50);
+        this.hideFindBar();
       }
     };
 
@@ -1093,38 +1144,71 @@ class YouTubeBatchManager {
     });
   }
 
-    private highlightCurrentMatch(): void {
+  private highlightCurrentMatch(): void {
     if (this.currentMatchIndex < 0 || this.currentMatchIndex >= this.searchMatches.length) return;
 
     const match = this.searchMatches[this.currentMatchIndex];
     const element = match.element;
+
+    document.querySelectorAll('.search-highlight-container').forEach(el => {
+      el.classList.remove('search-highlight-container');
+    });
+
+    element.classList.add('search-highlight-container');
 
     const videoElement = element.closest('[data-video-id]');
     if (videoElement) {
       videoElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    const searchText = this.currentSearchText.toLowerCase();
-    const elementText = element.value.toLowerCase();
-    const startIndex = elementText.indexOf(searchText);
+    this.createTextHighlightOverlay(element, this.currentSearchText);
 
-    if (startIndex !== -1) {
-      element.focus();
-      element.setSelectionRange(startIndex, startIndex + this.currentSearchText.length);
+    setTimeout(() => {
+      const findInput = document.getElementById('find-input') as HTMLInputElement;
+      if (findInput && this.findBarVisible) {
+        findInput.focus();
+      }
+    }, 0);
+  }
 
-      setTimeout(() => {
-        const findInput = document.getElementById('find-input') as HTMLInputElement;
-        if (findInput && this.findBarVisible) {
-          findInput.focus();
-        }
-      }, 100);
-    }
+    private createTextHighlightOverlay(element: HTMLInputElement | HTMLTextAreaElement, searchText: string): void {
+    document.querySelectorAll('[data-search-highlight]').forEach(el => {
+      el.removeAttribute('data-search-highlight');
+      el.removeAttribute('data-search-text');
+    });
+
+    const text = element.value;
+    const searchLower = searchText.toLowerCase();
+    const textLower = text.toLowerCase();
+    const startIndex = textLower.indexOf(searchLower);
+
+    if (startIndex === -1) return;
+
+    element.setAttribute('data-search-highlight', 'true');
+    element.setAttribute('data-search-text', searchText);
+
+    element.classList.add('search-text-match');
+
+    setTimeout(() => {
+      element.removeAttribute('data-search-highlight');
+      element.removeAttribute('data-search-text');
+      element.classList.remove('search-text-match');
+    }, 2000);
   }
 
   private clearFind(): void {
     this.searchMatches = [];
     this.currentMatchIndex = -1;
     this.updateFindResults({ activeMatchOrdinal: 0, matches: 0 });
+
+    document.querySelectorAll('.search-highlight-container').forEach(el => {
+      el.classList.remove('search-highlight-container');
+    });
+    document.querySelectorAll('[data-search-highlight]').forEach(el => {
+      el.removeAttribute('data-search-highlight');
+      el.removeAttribute('data-search-text');
+      el.classList.remove('search-text-match');
+    });
   }
 
   private updateFindResults(result: FindResult): void {
@@ -1134,11 +1218,14 @@ class YouTubeBatchManager {
 
     if (findResults) {
       if (result.matches === 0) {
-        findResults.textContent = 'No results';
+        findResults.textContent = rendererI18n.t('find.noResults');
       } else if (result.matches === 1) {
-        findResults.textContent = '1 result';
+        findResults.textContent = rendererI18n.t('find.oneResult');
       } else {
-        findResults.textContent = `${result.activeMatchOrdinal}/${result.matches}`;
+        findResults.textContent = rendererI18n.t('find.resultsCount', {
+          current: result.activeMatchOrdinal,
+          total: result.matches
+        });
       }
     }
 

@@ -146,5 +146,14 @@
         "credentialsJson": "credentials.json",
         "tokenJson": "token.json",
         "videosBackupJson": "videos_backup.json"
+    },
+    "find": {
+        "placeholder": "Find in page...",
+        "previousButton": "Previous (Shift+F3)",
+        "nextButton": "Next (F3)",
+        "closeButton": "Close (Esc)",
+        "noResults": "No results",
+        "oneResult": "1 result",
+        "resultsCount": "{current}/{total}"
     }
 }

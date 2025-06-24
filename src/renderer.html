@@ -14,6 +14,7 @@
       --text-tertiary: #a3a3a3;
       --border-color: #e5e5e5;
       --accent-primary: #ff6b7a;
+      --accent-primary-alpha: rgba(255, 107, 122, 0.2);
       --accent-success: #ff6b7a;
       --accent-warning: #ff6b7a;
       --accent-danger: #ff6b7a;
@@ -29,6 +30,7 @@
       --text-tertiary: #737373;
       --border-color: #262626;
       --accent-primary: #ff6b7a;
+      --accent-primary-alpha: rgba(255, 107, 122, 0.2);
       --accent-success: #ff6b7a;
       --accent-warning: #ff6b7a;
       --accent-danger: #ff6b7a;
@@ -771,6 +773,39 @@
       text-align: center;
     }
 
+    .search-highlight-container {
+      border: 2px solid var(--accent-primary) !important;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px var(--accent-primary-alpha), inset 0 0 0 1px var(--accent-primary-alpha) !important;
+
+      animation: search-pulse 0.5s ease-in-out;
+    }
+
+    .search-highlight-container::selection {
+      background-color: var(--accent-primary) !important;
+      color: white !important;
+    }
+
+    .search-highlight-container::-moz-selection {
+      background-color: var(--accent-primary) !important;
+      color: white !important;
+    }
+
+    @keyframes search-pulse {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 2px var(--accent-primary-alpha), inset 0 0 0 1px var(--accent-primary-alpha);
+      }
+      50% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 4px var(--accent-primary-alpha), inset 0 0 0 1px var(--accent-primary-alpha);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 2px var(--accent-primary-alpha), inset 0 0 0 1px var(--accent-primary-alpha);
+      }
+    }
+
     @media (max-width: 768px) {
       .find-bar {
         right: 16px;
@@ -1009,20 +1044,20 @@
 
   <div id="find-bar" class="find-bar hidden">
     <div class="find-content">
-      <input type="text" id="find-input" class="find-input" placeholder="Find in page..." />
+      <input type="text" id="find-input" class="find-input" data-i18n-placeholder="find.placeholder" />
       <div class="find-controls">
-        <button id="find-previous" class="find-btn" title="Previous (Shift+F3)">
+        <button id="find-previous" class="find-btn" data-i18n-title="find.previousButton">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15,18 9,12 15,6"></polyline>
           </svg>
         </button>
-        <button id="find-next" class="find-btn" title="Next (F3)">
+        <button id="find-next" class="find-btn" data-i18n-title="find.nextButton">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="9,18 15,12 9,6"></polyline>
           </svg>
         </button>
         <span id="find-results" class="find-results"></span>
-        <button id="find-close" class="find-btn find-close" title="Close (Escape)">
+        <button id="find-close" class="find-btn find-close" data-i18n-title="find.closeButton">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
