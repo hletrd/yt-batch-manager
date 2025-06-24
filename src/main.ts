@@ -63,10 +63,8 @@ interface StoreSchema {
 }
 
 const SCOPES = ['https://www.googleapis.com/auth/youtube'];
-const CACHE_DIR = path.join(__dirname, '../cache/thumbnails');
 // MD5 hash of thumbnail indicating the video is being processed
 const ERROR_THUMBNAIL_MD5 = 'e2ddfee11ae7edcae257da47f3a78a70';
-
 
 const getPortableExecutableDir = (): string => {
   if (process.env.PORTABLE_EXECUTABLE_DIR) {
@@ -103,6 +101,21 @@ const getTokenPath = (): string => {
     return path.join(__dirname, '..', 'token.json');
   }
 };
+
+const getCacheDirPath = (): string => {
+  if (app.isPackaged) {
+    if (process.platform === 'darwin') {
+      return path.join(path.dirname(app.getPath('exe')), '../../../', 'cache', 'thumbnails');
+    } else {
+      const portableDir = getPortableExecutableDir();
+      return path.join(portableDir, 'cache', 'thumbnails');
+    }
+  } else {
+    return path.join(__dirname, '..', 'cache', 'thumbnails');
+  }
+};
+
+const CACHE_DIR = getCacheDirPath();
 
 const store = new Store<StoreSchema>() as any;
 
