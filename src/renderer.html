@@ -1161,7 +1161,7 @@
               </a>
             </div>
           </div>
-          <button class="btn btn-primary" id="save-all-btn" onclick="app.saveAllChanges()" style="display: none;">
+          <button type="button" class="btn btn-primary hidden" id="save-all-btn" onclick="app.saveAllChanges()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17,21 17,13 7,13 7,21"/>
@@ -1198,18 +1198,18 @@
     <div class="find-content">
       <input type="text" id="find-input" class="find-input" data-i18n-placeholder="find.placeholder" />
       <div class="find-controls">
-        <button id="find-previous" class="find-btn" data-i18n-title="find.previousButton">
+        <button type="button" id="find-previous" class="find-btn" data-i18n-title="find.previousButton" aria-label="Previous">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15,18 9,12 15,6"></polyline>
           </svg>
         </button>
-        <button id="find-next" class="find-btn" data-i18n-title="find.nextButton">
+        <button type="button" id="find-next" class="find-btn" data-i18n-title="find.nextButton" aria-label="Next">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="9,18 15,12 9,6"></polyline>
           </svg>
         </button>
         <span id="find-results" class="find-results"></span>
-        <button id="find-close" class="find-btn find-close" data-i18n-title="find.closeButton">
+        <button type="button" id="find-close" class="find-btn find-close" data-i18n-title="find.closeButton" aria-label="Close">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
