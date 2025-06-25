@@ -46,9 +46,9 @@
     "wait-on": "^8.0.3"
   },
   "dependencies": {
+    "@googleapis/youtube": "^26.0.1",
     "electron-store": "^10.1.0",
-    "google-auth-library": "^10.1.0",
-    "googleapis": "^150.0.1"
+    "google-auth-library": "^10.1.0"
   },
   "build": {
     "appId": "com.hletrd.ytbatchmanager",
