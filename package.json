@@ -25,11 +25,11 @@
   "author": "YT Batch Manager",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^24.0.3",
+    "@types/node": "^24.0.4",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
     "concurrently": "^9.2.0",
-    "electron": "^36.5.0",
+    "electron": "^37.0.0",
     "electron-builder": "^26.0.12",
     "eslint": "^9.29.0",
     "rimraf": "^6.0.1",
