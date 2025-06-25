@@ -13,6 +13,8 @@
     "pack": "electron-builder",
     "dist": "electron-builder --publish=never",
     "clean": "rimraf dist",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
     "build:win": "npm run build && electron-builder --win --publish=never",
     "build:win:x64": "npm run build && electron-builder --win --x64 --publish=never",
     "build:win:arm64": "npm run build && electron-builder --win --arm64 --publish=never",
@@ -21,7 +23,13 @@
     "build:mac:arm64": "npm run build && electron-builder --mac --arm64 --publish=never",
     "build:all": "npm run build && electron-builder --win --mac --publish=never"
   },
-  "keywords": ["youtube", "batch", "manager", "electron", "typescript"],
+  "keywords": [
+    "youtube",
+    "batch",
+    "manager",
+    "electron",
+    "typescript"
+  ],
   "author": "YT Batch Manager",
   "license": "MIT",
   "devDependencies": {
@@ -32,14 +40,15 @@
     "electron": "^37.0.0",
     "electron-builder": "^26.0.12",
     "eslint": "^9.29.0",
+    "globals": "^16.2.0",
     "rimraf": "^6.0.1",
     "typescript": "^5.8.3",
     "wait-on": "^8.0.3"
   },
   "dependencies": {
+    "electron-store": "^10.1.0",
     "google-auth-library": "^10.1.0",
-    "googleapis": "^150.0.1",
-    "electron-store": "^10.1.0"
+    "googleapis": "^150.0.1"
   },
   "build": {
     "appId": "com.ytbatchmanager.app",
@@ -57,7 +66,11 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["universal", "x64", "arm64"]
+          "arch": [
+            "universal",
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "assets/icon.png",
@@ -69,7 +82,10 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "assets/icon.png",
@@ -79,7 +95,10 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "assets/icon.png"

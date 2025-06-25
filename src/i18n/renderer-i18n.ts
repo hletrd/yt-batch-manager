@@ -25,7 +25,7 @@ class RendererI18n {
       this.availableLanguages = result.languages.sort();
       console.log(`Available languages: ${this.availableLanguages.join(', ')}`);
     } catch (error) {
-      console.error('Error getting languages.');
+      console.error('Error getting languages.', error);
     }
 
     if (!this.availableLanguages.includes('en')) {
