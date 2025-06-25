@@ -94,6 +94,8 @@ class YouTubeBatchManager {
   private findBarVisible: boolean = false;
   private saveInProgress: Set<string> = new Set();
   private batchSaveInProgress: boolean = false;
+  private defaultThumbnail: string = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K';
+
 
   constructor() {
     this.initializeTheme();
@@ -602,7 +604,21 @@ class YouTubeBatchManager {
       console.error('Error getting thumbnail:', error);
     }
 
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K';
+    return this.defaultThumbnail;
+  }
+
+  private async handleThumbnailError(img: HTMLImageElement, filename: string): Promise<void> {
+    try {
+      const result = await window.youtubeAPI.getThumbnail(filename);
+      if (result.thumbnailPath) {
+        img.src = `file://${result.thumbnailPath}`;
+      } else {
+        img.src = this.defaultThumbnail;
+      }
+    } catch (error) {
+      console.error('Error retrying thumbnail download:', error);
+      img.src = this.defaultThumbnail;
+    }
   }
 
   private renderVideos(clear: boolean = false): void {
@@ -632,6 +648,7 @@ class YouTubeBatchManager {
 
     videosToAdd.forEach(async (video) => {
       const thumbnailUrl = await this.getThumbnailDataUrl(video.thumbnail_url.replace('cache://', ''));
+      const filename = video.thumbnail_url.replace('cache://', '');
 
       const videoHTML = `
         <div class="video-item" data-video-id="${video.id}">
@@ -641,7 +658,8 @@ class YouTubeBatchManager {
                 src="${thumbnailUrl}"
                 alt="Thumbnail"
                 loading="lazy"
-                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K'"
+                data-filename="${filename}"
+                onerror="app.handleImageError(this)"
               />
             </div>
             <div class="video-info">
@@ -740,6 +758,16 @@ class YouTubeBatchManager {
     this.autoResizeTextarea(textarea);
   }
 
+  handleImageError(img: HTMLImageElement): void {
+    const filename = img.getAttribute('data-filename');
+    if (filename && !img.hasAttribute('data-retry-attempted')) {
+      img.setAttribute('data-retry-attempted', 'true');
+      this.handleThumbnailError(img, filename);
+    } else {
+      img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K';
+    }
+  }
+
   private handleScroll(): void {
     if (this.state.isLoading || this.state.displayedVideos.length >= this.state.allVideos.length) return;
 
@@ -829,11 +857,35 @@ class YouTubeBatchManager {
       const result = await window.youtubeAPI.clearCache();
       if (result.success) {
         this.showStatus(rendererI18n.t('credentials.cacheDeletedSuccessfully'), 'success');
+        this.refreshThumbnails();
       } else {
         this.showStatus(result.error || 'Error clearing cache', 'error');
       }
     } catch (error) {
       this.showStatus('Error clearing cache', 'error');
+    }
+  }
+
+  private async refreshThumbnails(): Promise<void> {
+    const thumbnailImages = document.querySelectorAll('.video-thumbnail img') as NodeListOf<HTMLImageElement>;
+
+    for (const img of Array.from(thumbnailImages)) {
+      const videoItem = img.closest('.video-item');
+      if (videoItem) {
+        const videoId = videoItem.getAttribute('data-video-id');
+        if (videoId) {
+          const video = this.state.allVideos.find(v => v.id === videoId);
+          if (video) {
+            try {
+              const filename = video.thumbnail_url.replace('cache://', '');
+              const newThumbnailUrl = await this.getThumbnailDataUrl(filename);
+              img.src = newThumbnailUrl;
+            } catch (error) {
+              console.error(`Error refreshing thumbnail for video ${videoId}:`, error);
+            }
+          }
+        }
+      }
     }
   }
 
