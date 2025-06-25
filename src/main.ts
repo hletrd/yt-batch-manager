@@ -23,6 +23,7 @@ interface VideoData {
   thumbnails: Record<string, ThumbnailData>;
   published_at: string;
   privacy_status: string;
+  category_id: string;
   duration?: string;
   upload_status?: string;
   processing_status?: string;
@@ -49,7 +50,8 @@ interface UpdateRequest {
   video_id: string;
   title: string;
   description: string;
-  privacy_status?: string;
+  privacy_status: string;
+  category_id: string;
 }
 
 interface BatchUpdateResponse {
@@ -585,6 +587,7 @@ class YouTubeManager {
                 thumbnails: localThumbnails,
                 published_at: snippet.publishedAt || '',
                 privacy_status: privacyStatus,
+                category_id: snippet.categoryId,
                 duration: contentDetails.duration || undefined,
                 upload_status: status.uploadStatus || undefined,
                 processing_status: processingDetails.processingStatus || undefined,
@@ -621,7 +624,7 @@ class YouTubeManager {
     }
   }
 
-  async updateVideo(videoId: string, title: string, description: string, privacyStatus?: string): Promise<boolean> {
+  async updateVideo(videoId: string, title: string, description: string, privacyStatus: string, categoryId: string): Promise<boolean> {
     try {
       if (!this.youtube) {
         throw new Error('YouTube API not authenticated');
@@ -633,7 +636,7 @@ class YouTubeManager {
         snippet: {
           title,
           description,
-          categoryId: '',
+          categoryId,
         },
       };
 
@@ -928,9 +931,9 @@ class ElectronApp {
       }
     });
 
-    ipcMain.handle('youtube:update-video', async (_, { video_id, title, description, privacy_status }: UpdateRequest) => {
+    ipcMain.handle('youtube:update-video', async (_, { video_id, title, description, privacy_status, category_id }: UpdateRequest) => {
       try {
-        const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status);
+        const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status, category_id);
 
         if (success) {
           const videos = this.youtubeManager.getVideos();
@@ -938,9 +941,8 @@ class ElectronApp {
           if (video) {
             video.title = title;
             video.description = description;
-            if (privacy_status) {
-              video.privacy_status = privacy_status;
-            }
+            video.privacy_status = privacy_status;
+            video.category_id = category_id;
           }
         }
 
@@ -957,7 +959,7 @@ class ElectronApp {
       };
 
       for (const update of updates) {
-        const { video_id, title, description, privacy_status } = update;
+        const { video_id, title, description, privacy_status, category_id } = update;
 
         if (!video_id || title === undefined || description === undefined) {
           results.failed.push({
@@ -968,7 +970,7 @@ class ElectronApp {
         }
 
         try {
-          const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status);
+          const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status, category_id);
 
           if (success) {
             const videos = this.youtubeManager.getVideos();
@@ -976,9 +978,8 @@ class ElectronApp {
             if (video) {
               video.title = title;
               video.description = description;
-              if (privacy_status) {
-                video.privacy_status = privacy_status;
-              }
+              video.privacy_status = privacy_status;
+              video.category_id = category_id;
             }
 
             results.successful.push({ video_id, title });
