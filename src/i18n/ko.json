@@ -10,17 +10,15 @@
   },
   "buttons": {
     "loadFromYouTube": "유튜브에서 불러오기",
-    "saveAll": "모두 저장",
     "saveAllCount": "모두 저장 ({count}개)",
     "updateVideoInfo": "동영상 정보 저장",
-    "updating": "업데이트 중...",
     "removeSavedCredentials": "저장된 인증 정보 삭제",
     "deleteCache": "썸네일 캐시 삭제",
     "selectCredentialsFile": "인증 정보 파일 선택"
   },
   "navigation": {
     "sortBy": "정렬",
-    "openSaveFile": "파일 불러오기 / 저장"
+    "advanced": "기능"
   },
   "sorting": {
     "dateNewestFirst": "날짜 (최신 순)",
@@ -50,11 +48,11 @@
     "credentialsNotFound": "credentials.json 파일을 {path}에서 찾을 수 없습니다.",
     "credentialsMissingFields": "credentials.json 파일이 잘못되었습니다.",
     "credentialsInvalid": "credentials.json 파일이 유효하지 않거나 손상되었습니다. Google Cloud Console에서 새 파일을 다운로드하세요.",
-    "stillNoValidCredentials": "유효한 인증 정보를 찾을 수 없습니다",
+    "stillNoValidCredentials": "유효한 인증 정보를 찾을 수 없습니다.",
     "selectCredentialsFile": "credentials.json 파일 선택",
-    "credentialsSelectedSuccessfully": "인증 정보 파일이 성공적으로 선택되었습니다",
-    "credentialsRemovedSuccessfully": "저장된 인증 정보가 성공적으로 삭제되었습니다",
-    "cacheDeletedSuccessfully": "캐시가 성공적으로 삭제되었습니다"
+    "credentialsSelectedSuccessfully": "인증 정보 파일을 불러왔습니다.",
+    "credentialsRemovedSuccessfully": "저장된 인증 정보를 삭제했습니다.",
+    "cacheDeletedSuccessfully": "캐시를 삭제했습니다."
   },
   "authentication": {
     "successful": "인증에 성공했습니다.",
@@ -87,33 +85,29 @@
     "videosUpdatedWithFailures": "{successCount}개 동영상을 업데이트하였고 {failCount}개 업데이트에 실패했습니다.",
     "allVideosUpdatedSuccessfully": "{successCount}개 동영상이 업데이트되었습니다.",
     "videoUpdatedSuccessfully": "동영상을 업데이트했습니다.",
-    "updatedSuccessfully": "업데이트에 성공했습니다.",
-    "saving": "저장 중...",
     "failedToUpdateVideo": "동영상을 업데이트하지 못했습니다.",
     "errorUpdatingVideo": "동영상 업데이트 중 오류가 발생했습니다.",
     "fileSelectionCancelled": "사용자가 파일 선택을 취소했습니다.",
     "failedToLoadVideosFromFile": "파일에서 동영상 정보를 불러오지 못했습니다.",
     "videosLoadedSuccessfully": "{count}개의 동영상 정보를 불러왔습니다.",
-    "loadedSuccessfully": "성공적으로 불러왔습니다.",
-    "authenticatedSuccessfully": "인증이 완료되었습니다.",
     "authenticationFailed": "인증에 실패했습니다.",
     "errorLoadingVideos": "동영상 정보를 불러오지 못했습니다.",
-    "errorAuthenticating": "인증 중 오류가 발생했습니다.",
-    "noChannelInfo": "채널 정보가 없습니다.",
-    "errorFetchingChannelInfo": "채널 정보를 가져오지 못했습니다.",
     "videosSavedSuccessfully": "동영상 백업을 저장했습니다.",
     "errorSavingVideos": "동영상 저장 중 오류가 발생했습니다.",
-    "authenticatingAndLoadingVideos": "동영상 정보 불러오는 중...",
+    "authenticatingAndLoadingVideos": "동영상 정보를 불러오고 있습니다...",
     "preparingDownload": "저장 준비 중...",
     "downloadCancelled": "저장이 취소되었습니다.",
     "loadingVideosFromFile": "파일에서 동영상 정보를 불러오는 중...",
-    "videosLoadedFromFileSuccessfully": "파일에서 동영상 정보를 불러왔습니다."
+    "videosLoadedFromFileSuccessfully": "파일에서 동영상 정보를 불러왔습니다.",
+    "loadingSubtextDefault": "동영상 정보를 불러오고 있습니다. 잠시만 기다려주세요.",
+    "loadingSubtextFile": "백업 파일을 불러오고 있습니다..."
   },
   "privacy": {
     "public": "공개",
     "private": "비공개",
     "unlisted": "일부 공개",
-    "unknown": "알 수 없음"
+    "unknown": "알 수 없음",
+    "privacyStatusUnspecified": "알 수 없음"
   },
   "http": {
     "authenticationSuccessful": "<html><head><meta charset='utf-8'></head><body><h2>인증이 완료되었습니다.</h2><p>이 창을 닫고 애플리케이션으로 돌아가세요.</p></body></html>",
@@ -123,14 +117,9 @@
     "contentTypeHtml": "text/html"
   },
   "console": {
-    "authenticationFailed": "인증에 실패했습니다:",
-    "unsavedChanges": "{count}개 동영상에 저장되지 않은 변경사항이 있습니다"
+    "authenticationFailed": "인증에 실패했습니다:"
   },
   "dialog": {
-    "unsavedChangesWarning": "{count}개의 저장되지 않은 변경사항이 있습니다. 정말 종료하시겠습니까?",
-    "jsonFiles": "JSON 파일",
-    "allFiles": "모든 파일",
-    "fileSavePrompt": "동영상 정보 저장",
     "confirmRemoveCredentials": "저장된 인증 정보를 삭제하시겠습니까?",
     "confirmRemoveCredentialsMessage": "저장된 인증 정보와 인증 토큰이 삭제됩니다. 다시 인증하려면 새로운 인증 정보 파일을 선택해야 합니다. 삭제한 인증 정보는 복구할 수 없습니다.",
     "confirmClearCache": "캐시를 삭제하시겠습니까?",
@@ -141,11 +130,6 @@
     "pleaseVisit": "다음 링크에 방문해주세요: https://console.cloud.google.com/",
     "youtubeWatch": "https://www.youtube.com/watch?v=",
     "youtubeShort": "https://youtu.be/watch?v="
-  },
-  "files": {
-    "credentialsJson": "credentials.json",
-    "tokenJson": "token.json",
-    "videosBackupJson": "videos_backup.json"
   },
   "find": {
     "placeholder": "검색",

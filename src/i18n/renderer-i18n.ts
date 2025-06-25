@@ -23,13 +23,13 @@ class RendererI18n {
     try {
       const result = await (window as any).youtubeAPI?.getAvailableLanguages();
       this.availableLanguages = result.languages.sort();
-      console.log(`Available languages from main process: ${this.availableLanguages.join(', ')}`);
+      console.log(`Available languages: ${this.availableLanguages.join(', ')}`);
     } catch (error) {
       console.error('Error getting languages.');
     }
 
     if (!this.availableLanguages.includes('en')) {
-      console.warn('English language file not found');
+      console.warn('English language file (fallback) not found');
       this.availableLanguages.unshift('en');
     }
   }
