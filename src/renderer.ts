@@ -576,7 +576,7 @@ class YouTubeBatchManager {
   }
 
   private generateLanguageOptions(selectedLanguageId?: string): string {
-    const defaultOption = '<option value="">(None)</option>';
+    const defaultOption = `<option value="">${rendererI18n.t('app.default')}</option>`;
     const options = Object.values(this.i18nLanguages).map(language => {
       const selected = language.id === selectedLanguageId ? 'selected' : '';
       return `<option value="${language.id}" ${selected}>${this.escapeHtml(language.name)}</option>`;

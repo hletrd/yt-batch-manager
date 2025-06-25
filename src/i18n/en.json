@@ -6,7 +6,8 @@
     "noVideosLoadedDescription": "Click \"Load from YouTube\" to fetch your videos, or \"Load from File\" to load a previous backup.",
     "currentlyManagingChannel": "Currently managing channel",
     "published": "Published",
-    "thumbnail": "Thumbnail"
+    "thumbnail": "Thumbnail",
+    "default": "Default"
   },
   "buttons": {
     "loadFromYouTube": "Load from YouTube",

@@ -578,8 +578,6 @@ class YouTubeManager {
                 }
               }
 
-              console.log(snippet);
-
               const status = videoDetail.status || {};
               const contentDetails = videoDetail.contentDetails || {};
               const statistics = videoDetail.statistics || {};

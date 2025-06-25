@@ -6,7 +6,8 @@
     "noVideosLoadedDescription": "\"유튜브에서 불러오기\"를 클릭해서 채널의 동영상 정보를 가져오거나, \"파일에서 불러오기\"를 클릭해서 저장된 파일을 불러오세요.",
     "currentlyManagingChannel": "현재 편집중인 채널",
     "published": "업로드 날짜",
-    "thumbnail": "썸네일"
+    "thumbnail": "썸네일",
+    "default": "기본값"
   },
   "buttons": {
     "loadFromYouTube": "유튜브에서 불러오기",
