@@ -1311,6 +1311,8 @@ class YouTubeBatchManager {
           saveJsonLink.style.pointerEvents = 'auto';
           saveJsonLink.style.opacity = '1';
         }
+      } else {
+        await this.loadVideos();
       }
     } catch (error) {
       console.error(rendererI18n.t('errors.errorInitializingApp'), error);
