@@ -14,7 +14,9 @@
     "updateVideoInfo": "동영상 정보 저장",
     "removeSavedCredentials": "저장된 인증 정보 삭제",
     "deleteCache": "썸네일 캐시 삭제",
-    "selectCredentialsFile": "인증 정보 파일 선택"
+    "selectCredentialsFile": "인증 정보 파일 선택",
+    "saving": "저장 중...",
+    "updating": "업데이트 중..."
   },
   "navigation": {
     "sortBy": "정렬",

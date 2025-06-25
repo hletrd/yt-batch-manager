@@ -366,7 +366,7 @@ class YouTubeBatchManager {
     const originalText = saveAllBtn.innerHTML;
 
     saveAllBtn.disabled = true;
-    saveAllBtn.innerHTML = 'Saving...';
+    saveAllBtn.innerHTML = `${rendererI18n.t('buttons.saving')}...`;
 
     this.batchSaveInProgress = true;
 
@@ -696,7 +696,7 @@ class YouTubeBatchManager {
     const updateBtn = document.getElementById(`update-btn-${videoId}`) as HTMLButtonElement;
 
     updateBtn.disabled = true;
-    updateBtn.textContent = 'Updating...';
+    updateBtn.textContent = `${rendererI18n.t('buttons.updating')}`;
 
     this.saveInProgress.add(videoId);
 
