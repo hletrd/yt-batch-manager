@@ -4,21 +4,24 @@
 
 ![Edit](./docs/edit.png)
 
+## [Download](https://github.com/hletrd/yt-batch-manager/releases)
+
+* Download the app from [Releases](https://github.com/hletrd/yt-batch-manager/releases).
+* [Releases](https://github.com/hletrd/yt-batch-manager/releases) 페이지에서 다운로드할 수 있습니다.
+
+## About
+
 As both YouTube studio webpage and YT studio mobile app does not provide a convinient user experiences for batch editing video titles and descriptions, I had to make this app to manage titles and descriptions of my videos in a single place.
 
 This is an Electron port, as a standalone app, of [yt-batch-manager-py](https://github.com/hletrd/yt-batch-manager-py). It supports macOS (Intel, Apple Silicon) 10.15+, Windows (x86-64, arm64) 10+, and many Linux distributions (x86-64, arm64, tested on Ubuntu 24.04 LTS).
 
-Download the app from [Releases](https://github.com/hletrd/yt-batch-manager/releases).
+* Disclaimer: YouTube is a registered trademark of Google LLC, and this project is not affiliated with YouTube in any way.
 
----
+## 설명
 
 유튜브 채널의 영상 제목과 설명을 한 페이지에서 바로 수정하고 관리할 수 있는 앱입니다.
 
 유튜브 채널에서 영상 제목과 설명을 한 번에 수정할 때 각 영상에 하나하나 들어가서 확인하고 수정해야 하는 게 너무 킹받아서 만들었습니다. 웹 페이지든 YT Studio 모바일 앱이든 왜 영상 제목과 설명을 한 번에 나열해서 수정할 수 있는 기능이 없는건지 모르겠습니다. 원래 [Python으로 만들었다가](https://github.com/hletrd/yt-batch-manager-py) 별도 데스크탑 앱이 편할 것 같아 Electron으로 다시 만들었습니다. macOS(Intel, Apple Silicon) 10.15 이상과 윈도우(x86-64, arm64) 10 이상, 여러 리눅스 배포판(x86-64, arm64, 우분투 24.04에서 테스트함)을 지원합니다.
-
-[Releases](https://github.com/hletrd/yt-batch-manager/releases) 페이지에서 다운로드할 수 있습니다.
-
-* Disclaimer: YouTube is a registered trademark of Google LLC, and this project is not affiliated with YouTube in any way.
 
 ---
 
