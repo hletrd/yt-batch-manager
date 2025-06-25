@@ -51,7 +51,7 @@
     "googleapis": "^150.0.1"
   },
   "build": {
-    "appId": "com.ytbatchmanager.app",
+    "appId": "com.hletrd.ytbatchmanager",
     "productName": "YT Batch Manager",
     "directories": {
       "output": "build"
