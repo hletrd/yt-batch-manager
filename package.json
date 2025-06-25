@@ -1,7 +1,12 @@
 {
   "name": "yt-batch-manager",
   "version": "1.0.4",
-  "description": "YouTube Batch Manager",
+  "description": "YouTube Batch Manager to manage the videos in your channel in a single page.",
+  "homepage": "https://github.com/hletrd/yt-batch-manager",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hletrd/yt-batch-manager.git"
+  },
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
@@ -30,8 +35,8 @@
     "electron",
     "typescript"
   ],
-  "author": "YT Batch Manager",
-  "license": "MIT",
+  "author": "Jiyong Youn",
+  "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@types/node": "^24.0.4",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
@@ -59,8 +64,10 @@
     "files": [
       "dist/**/*",
       "src/renderer.html",
-      "src/i18n/**/*"
+      "dist/i18n/**/*"
     ],
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "icon": "assets/icon.png",
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
@@ -70,13 +77,12 @@
             "universal",
             "x64",
             "arm64"
-          ]
+          ],
+          "backgroundColor": "#ffc4cc",
+          "format": "ULMO"
         }
       ],
-      "icon": "assets/icon.png",
-      "hardenedRuntime": true,
-      "entitlements": "assets/entitlements.mac.plist",
-      "entitlementsInherit": "assets/entitlements.mac.plist"
+      "darkModeSupport": true
     },
     "win": {
       "target": [
@@ -87,11 +93,10 @@
             "arm64"
           ]
         }
-      ],
-      "icon": "assets/icon.png",
-      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
+      ]
     },
     "linux": {
+      "category": "Utility",
       "target": [
         {
           "target": "AppImage",
@@ -100,8 +105,7 @@
             "arm64"
           ]
         }
-      ],
-      "icon": "assets/icon.png"
+      ]
     }
   }
 }
