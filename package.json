@@ -77,12 +77,14 @@
             "universal",
             "x64",
             "arm64"
-          ],
-          "backgroundColor": "#ffc4cc",
-          "format": "ULMO"
+          ]
         }
       ],
       "darkModeSupport": true
+    },
+    "dmg": {
+      "backgroundColor": "#ffc4cc",
+      "format": "ULFO"
     },
     "win": {
       "target": [
