@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, screen, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, screen } from 'electron';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs/promises';
@@ -628,11 +628,9 @@ class ElectronApp {
       await i18n.initialize();
       this.createWindow();
       this.setupIpcHandlers();
-      this.registerGlobalShortcuts();
     });
 
     app.on('window-all-closed', () => {
-      globalShortcut.unregisterAll();
       app.quit();
     });
 
@@ -641,27 +639,37 @@ class ElectronApp {
         this.createWindow();
       }
     });
-
-    app.on('will-quit', () => {
-      globalShortcut.unregisterAll();
-    });
   }
 
-  private registerGlobalShortcuts(): void {
-    globalShortcut.register('CommandOrControl+F', () => {
-      this.toggleFind();
-    });
+  private registerLocalShortcuts(): void {
+    if (!this.mainWindow) return;
 
-    globalShortcut.register('F3', () => {
-      this.findNext();
-    });
+    this.mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (!this.mainWindow?.isFocused()) return;
 
-    globalShortcut.register('Shift+F3', () => {
-      this.findPrevious();
-    });
+      if ((input.control || input.meta) && input.key.toLowerCase() === 'f' && !input.shift && !input.alt) {
+        event.preventDefault();
+        this.toggleFind();
+        return;
+      }
 
-    globalShortcut.register('Escape', () => {
-      this.closeFind();
+      if (input.key === 'F3' && !input.control && !input.meta && !input.shift && !input.alt) {
+        event.preventDefault();
+        this.findNext();
+        return;
+      }
+
+      if (input.key === 'F3' && input.shift && !input.control && !input.meta && !input.alt) {
+        event.preventDefault();
+        this.findPrevious();
+        return;
+      }
+
+      if (input.key === 'Escape' && !input.control && !input.meta && !input.shift && !input.alt) {
+        event.preventDefault();
+        this.closeFind();
+        return;
+      }
     });
   }
 
@@ -731,6 +739,7 @@ class ElectronApp {
 
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow?.show();
+      this.registerLocalShortcuts();
     });
 
     if (process.argv.includes('--dev')) {
