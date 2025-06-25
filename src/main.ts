@@ -682,6 +682,16 @@ class YouTubeManager {
     }
   }
 
+  async saveFilteredVideosToFile(filename: string, videos: Partial<VideoData>[]): Promise<boolean> {
+    try {
+      await fs.writeFile(filename, JSON.stringify(videos, null, 2), 'utf-8');
+      return true;
+    } catch (error) {
+      console.error('Error saving filtered videos:', error);
+      return false;
+    }
+  }
+
   async loadVideosFromFile(filename: string = 'videos_backup.json'): Promise<boolean> {
     try {
       if (fsSync.existsSync(filename)) {
@@ -1139,6 +1149,28 @@ class ElectronApp {
 
         if (!result.canceled && result.filePath) {
           const success = await this.youtubeManager.saveVideosToFile(result.filePath);
+          return { success, filePath: result.filePath };
+        }
+
+        return { success: false, cancelled: true };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
+    });
+
+    ipcMain.handle('youtube:download-filtered-videos', async (_, { videos }: { videos: Partial<VideoData>[] }) => {
+      try {
+        const result = await dialog.showSaveDialog(this.mainWindow!, {
+          title: 'Save Videos Backup',
+          defaultPath: 'videos_backup.json',
+          filters: [
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        });
+
+        if (!result.canceled && result.filePath) {
+          const success = await this.youtubeManager.saveFilteredVideosToFile(result.filePath, videos);
           return { success, filePath: result.filePath };
         }
 

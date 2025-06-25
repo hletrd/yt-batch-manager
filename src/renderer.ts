@@ -8,6 +8,7 @@ interface YouTubeAPI {
   saveVideos: () => Promise<any>;
   loadFromFile: () => Promise<any>;
   downloadVideoInfo: () => Promise<any>;
+  downloadFilteredVideoInfo: (data: { videos: Partial<VideoData>[] }) => Promise<any>;
   loadJsonFile: () => Promise<any>;
   getThumbnail: (filename: string) => Promise<any>;
   getChannelInfo: () => Promise<any>;
@@ -868,11 +869,28 @@ class YouTubeBatchManager {
     }
   }
 
+  private filterVideoDataForBackup(videos: VideoData[]): Partial<VideoData>[] {
+    return videos.map(video => {
+      const {
+        thumbnails,
+        thumbnail_url,
+        duration,
+        upload_status,
+        processing_status,
+        processing_progress,
+        statistics,
+        ...filteredVideo
+      } = video;
+      return filteredVideo;
+    });
+  }
+
   async downloadVideoInfo(): Promise<void> {
     this.showStatus(rendererI18n.t('status.preparingDownload'), 'info');
 
     try {
-      const result = await window.youtubeAPI.downloadVideoInfo();
+      const filteredVideos = this.filterVideoDataForBackup(this.state.allVideos);
+      const result = await window.youtubeAPI.downloadFilteredVideoInfo({ videos: filteredVideos });
 
       if (result.success && !result.cancelled) {
         this.showStatus(rendererI18n.t('status.videosSavedSuccessfully'), 'success');

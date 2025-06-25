@@ -8,6 +8,7 @@ interface YouTubeAPI {
   saveVideos: () => Promise<any>;
   loadFromFile: () => Promise<any>;
   downloadVideoInfo: () => Promise<any>;
+  downloadFilteredVideoInfo: (data: { videos: any[] }) => Promise<any>;
   loadJsonFile: () => Promise<any>;
   getThumbnail: (filename: string) => Promise<any>;
   getChannelInfo: () => Promise<any>;
@@ -31,6 +32,7 @@ const youtubeAPI: YouTubeAPI = {
   saveVideos: () => ipcRenderer.invoke('youtube:save-videos'),
   loadFromFile: () => ipcRenderer.invoke('youtube:load-from-file'),
   downloadVideoInfo: () => ipcRenderer.invoke('youtube:download-videos'),
+  downloadFilteredVideoInfo: (data) => ipcRenderer.invoke('youtube:download-filtered-videos', data),
   loadJsonFile: () => ipcRenderer.invoke('youtube:load-json-file'),
   getThumbnail: (filename) => ipcRenderer.invoke('youtube:get-thumbnail', filename),
   getChannelInfo: () => ipcRenderer.invoke('youtube:get-channel-info'),
