@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -352,7 +352,7 @@
       border-radius: 6px;
       text-decoration: none;
       color: var(--text-secondary);
-      font-size: 12px;
+      font-size: 11px;
       font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
       margin-bottom: 12px;
       transition: all 0.3s ease;
@@ -444,7 +444,7 @@
 
     .video-stats {
       display: flex;
-      gap: 16px;
+      gap: 8px;
       align-items: center;
       flex-wrap: wrap;
     }
@@ -1131,6 +1131,95 @@
     .disabled {
       pointer-events: none;
       opacity: 0.5;
+    }
+
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 32px;
+      margin-bottom: 8px;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      transition: border-color 0.3s ease;
+    }
+
+    .tags-container:focus-within {
+      border-color: var(--accent-primary);
+    }
+
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-primary);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1;
+      max-width: 200px;
+      overflow: hidden;
+    }
+
+    .tag-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tag-remove {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: none;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+      color: white;
+      flex-shrink: 0;
+      transition: background-color 0.2s ease;
+    }
+
+    .tag-remove:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .tag-input {
+      flex: 1;
+      min-width: 120px;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 14px;
+      padding: 4px 0;
+      font-family: inherit;
+    }
+
+    .tag-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .tags-counter {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: -28px;
+      padding-bottom: 9px;
+      text-align: right;
+      font-weight: 500;
+      margin-bottom: 0px;
+    }
+
+    .tags-counter.warning {
+      color: var(--accent-danger);
+      font-weight: 600;
     }
   </style>
 </head>

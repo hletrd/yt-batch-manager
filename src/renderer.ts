@@ -3,8 +3,8 @@ import rendererI18n from './i18n/renderer-i18n.js';
 interface YouTubeAPI {
   authenticate: () => Promise<{ success: boolean; error?: string }>;
   loadVideos: () => Promise<any>;
-  updateVideo: (data: { video_id: string; title: string; description: string; privacy_status: string; category_id: string }) => Promise<any>;
-  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string; privacy_status: string; category_id: string }> }) => Promise<any>;
+  updateVideo: (data: { video_id: string; title: string; description: string; privacy_status: string; category_id: string; tags?: string[] }) => Promise<any>;
+  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string; privacy_status: string; category_id: string; tags?: string[] }> }) => Promise<any>;
   saveVideos: () => Promise<any>;
   loadFromFile: () => Promise<any>;
   downloadVideoInfo: () => Promise<any>;
@@ -43,6 +43,7 @@ interface VideoData {
   published_at: string;
   privacy_status: string;
   category_id: string;
+  tags?: string[];
   duration?: string;
   upload_status?: string;
   processing_status?: string;
@@ -103,6 +104,7 @@ class YouTubeBatchManager {
     currentPage: 0,
     isLoading: false,
   };
+  private originalVideosState: Map<string, VideoData> = new Map();
 
   private currentSearchText: string = '';
   private searchMatches: SearchMatch[] = [];
@@ -354,6 +356,174 @@ class YouTubeBatchManager {
     }
   }
 
+  updateTagsCounter(videoId: string): void {
+    const video = this.state.allVideos.find(v => v.id === videoId);
+    const counter = document.getElementById(`tags-counter-${videoId}`);
+
+    if (video && counter) {
+      const tagCount = (video.tags || []).length;
+      counter.textContent = `${tagCount}/500`;
+
+      if (tagCount > 500) {
+        counter.classList.add('warning');
+      } else {
+        counter.classList.remove('warning');
+      }
+    }
+  }
+
+  focusTagInput(videoId: string): void {
+    const tagInput = document.getElementById(`tag-input-${videoId}`) as HTMLInputElement;
+    if (tagInput) {
+      tagInput.focus();
+    }
+  }
+
+  handleTagKeydown(event: KeyboardEvent, videoId: string): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.trim();
+
+    if ((event.key === 'Enter' || event.key === ',') && value) {
+      event.preventDefault();
+      this.processTagInput(videoId, value);
+      input.value = '';
+    } else if (event.key === 'Backspace' && !value) {
+      event.preventDefault();
+      const video = this.state.allVideos.find(v => v.id === videoId);
+      if (video && video.tags && video.tags.length > 0) {
+        const lastTag = video.tags[video.tags.length - 1];
+        this.removeTag(videoId, lastTag);
+      }
+    }
+  }
+
+  handleTagChange(videoId: string): void {
+    const input = document.getElementById(`tag-input-${videoId}`) as HTMLInputElement;
+    if (!input) return;
+
+    const value = input.value;
+
+    if (value.includes(',')) {
+      this.processTagInput(videoId, value);
+      input.value = '';
+    }
+
+    this.checkForChanges(videoId);
+  }
+
+    processTagInput(videoId: string, inputValue: string): void {
+    const potentialTags = inputValue.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+
+    for (const tag of potentialTags) {
+      this.addTag(videoId, tag);
+    }
+  }
+
+  handleTagPaste(event: ClipboardEvent, videoId: string): void {
+    event.preventDefault();
+
+    const pastedText = event.clipboardData?.getData('text') || '';
+    const input = event.target as HTMLInputElement;
+
+    const combinedText = input.value + pastedText;
+
+    this.processTagInput(videoId, combinedText);
+
+    input.value = '';
+
+    setTimeout(() => input.focus(), 0);
+  }
+
+  addTag(videoId: string, tagText: string): void {
+    if (!tagText.trim()) return;
+
+    const video = this.state.allVideos.find(v => v.id === videoId);
+    if (!video) return;
+
+    const cleanTag = tagText.trim();
+
+    if (!video.tags) {
+      video.tags = [];
+    }
+
+    const tagExists = video.tags.some(tag => tag.toLowerCase() === cleanTag.toLowerCase());
+    if (tagExists) return;
+
+    const totalLength = video.tags.join(',').length + cleanTag.length + 1;
+    if (totalLength > 500) return;
+
+    video.tags.push(cleanTag);
+
+    this.renderTagsContainer(videoId);
+    this.updateTagsCounter(videoId);
+    this.checkForChanges(videoId);
+
+    setTimeout(() => {
+      const input = document.getElementById(`tag-input-${videoId}`) as HTMLInputElement;
+      if (input) {
+        input.focus();
+      }
+    }, 10);
+  }
+
+  removeTag(videoId: string, tagText: string): void {
+    const video = this.state.allVideos.find(v => v.id === videoId);
+    if (!video || !video.tags) return;
+
+    video.tags = video.tags.filter(tag => tag !== tagText);
+
+    this.renderTagsContainer(videoId);
+    this.updateTagsCounter(videoId);
+    this.checkForChanges(videoId);
+
+    setTimeout(() => {
+      const input = document.getElementById(`tag-input-${videoId}`) as HTMLInputElement;
+      if (input) {
+        input.focus();
+      }
+    }, 10);
+  }
+
+  private renderTagsContainer(videoId: string): void {
+    const container = document.getElementById(`tags-container-${videoId}`);
+    const video = this.state.allVideos.find(v => v.id === videoId);
+
+    if (!container || !video) return;
+
+    const currentInput = container.querySelector('.tag-input') as HTMLInputElement;
+    const hadFocus = currentInput && document.activeElement === currentInput;
+
+    const tagsHtml = (video.tags || []).map(tag => `
+      <div class="tag-chip">
+        <span class="tag-text">${this.escapeHtml(tag)}</span>
+        <button type="button" class="tag-remove" onclick="app.removeTag('${videoId}', '${this.escapeHtml(tag)}')" aria-label="Remove tag">×</button>
+      </div>
+    `).join('');
+
+    const tagInput = container.querySelector('.tag-input') as HTMLInputElement;
+    const placeholder = tagInput?.placeholder || '';
+
+    container.innerHTML = `
+      ${tagsHtml}
+      <input
+        type="text"
+        class="tag-input"
+        id="tag-input-${videoId}"
+        placeholder="${placeholder}"
+        onkeydown="app.handleTagKeydown(event, '${videoId}')"
+        oninput="app.handleTagChange('${videoId}')"
+        onpaste="app.handleTagPaste(event, '${videoId}')"
+      />
+    `;
+
+    if (hadFocus) {
+      const newInput = container.querySelector('.tag-input') as HTMLInputElement;
+      if (newInput) {
+        setTimeout(() => newInput.focus(), 0);
+      }
+    }
+  }
+
   private async loadVideoCategories(): Promise<void> {
     try {
       if (Object.keys(this.videoCategories).length === 0) {
@@ -386,7 +556,7 @@ class YouTubeBatchManager {
 
     this.batchSaveInProgress = true;
 
-    const savedData = new Map<string, {title: string, description: string, privacy_status: string, category_id: string}>();
+    const savedData = new Map<string, {title: string, description: string, privacy_status: string, category_id: string, tags: string[]}>();
 
     const updates = Array.from(this.state.changedVideos).map(videoId => {
       const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
@@ -394,13 +564,15 @@ class YouTubeBatchManager {
       const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
       const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
       const originalVideo = this.state.allVideos.find(v => v.id === videoId);
+      const currentVideo = this.state.allVideos.find(v => v.id === videoId);
 
       const title = titleInput.value;
       const description = descriptionInput.value;
       const privacy_status = (privacySelect?.value !== originalVideo?.privacy_status) ? privacySelect?.value : originalVideo?.privacy_status;
       const category_id = (categorySelect?.value !== originalVideo?.category_id) ? categorySelect?.value : originalVideo?.category_id;
+      const tags = currentVideo?.tags || [];
 
-      savedData.set(videoId, { title, description, privacy_status, category_id });
+      savedData.set(videoId, { title, description, privacy_status, category_id, tags });
 
       return {
         video_id: videoId,
@@ -408,6 +580,7 @@ class YouTubeBatchManager {
         description,
         privacy_status,
         category_id,
+        tags,
       };
     });
 
@@ -452,6 +625,7 @@ class YouTubeBatchManager {
               if (saved.category_id) {
                 this.state.allVideos[videoIndex].category_id = saved.category_id;
               }
+              this.state.allVideos[videoIndex].tags = saved.tags;
             }
           });
         } else {
@@ -476,6 +650,7 @@ class YouTubeBatchManager {
               if (saved.category_id) {
                 this.state.allVideos[videoIndex].category_id = saved.category_id;
               }
+              this.state.allVideos[videoIndex].tags = saved.tags;
             }
           });
         }
@@ -592,6 +767,12 @@ class YouTubeBatchManager {
         );
 
         this.state.allVideos = result.videos;
+
+        this.originalVideosState.clear();
+        result.videos.forEach((video: VideoData) => {
+          this.originalVideosState.set(video.id, { ...video, tags: [...(video.tags || [])] });
+        });
+
         this.sortAllVideos();
         this.state.currentPage = 0;
         await this.renderVideos(true);
@@ -678,6 +859,12 @@ class YouTubeBatchManager {
 
         await this.loadVideoCategories();
         this.state.allVideos = result.videos;
+
+        this.originalVideosState.clear();
+        result.videos.forEach((video: VideoData) => {
+          this.originalVideosState.set(video.id, { ...video, tags: [...(video.tags || [])] });
+        });
+
         this.sortAllVideos();
         this.state.currentPage = 0;
         await this.renderVideos(true);
@@ -723,6 +910,8 @@ class YouTubeBatchManager {
     const savedDescription = descriptionInput.value;
     const savedPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
     const savedCategoryId = categorySelect?.value || originalVideo.category_id;
+    const currentVideo = this.state.allVideos.find(v => v.id === videoId);
+    const savedTags = currentVideo?.tags || [];
 
     try {
       const result = await window.youtubeAPI.updateVideo({
@@ -731,6 +920,7 @@ class YouTubeBatchManager {
         description: savedDescription,
         privacy_status: savedPrivacyStatus,
         category_id: savedCategoryId,
+        tags: savedTags,
       });
 
       if (result.success) {
@@ -752,7 +942,13 @@ class YouTubeBatchManager {
           this.state.allVideos[videoIndex].description = savedDescription;
           this.state.allVideos[videoIndex].privacy_status = savedPrivacyStatus;
           this.state.allVideos[videoIndex].category_id = savedCategoryId;
+          this.state.allVideos[videoIndex].tags = savedTags;
         }
+
+        this.originalVideosState.set(videoId, {
+          ...this.state.allVideos[videoIndex],
+          tags: [...savedTags]
+        });
 
         if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription, savedPrivacyStatus, savedCategoryId)) {
           this.state.changedVideos.delete(videoId);
@@ -937,6 +1133,28 @@ class YouTubeBatchManager {
             >${this.escapeHtml(video.description)}</textarea>
           </div>
 
+          <div class="form-group">
+            <label for="tags-${video.id}">${rendererI18n.t('form.tags')}</label>
+            <div class="tags-counter" id="tags-counter-${video.id}">${(video.tags || []).length}/500</div>
+            <div class="tags-container" id="tags-container-${video.id}" onclick="app.focusTagInput('${video.id}')">
+              ${(video.tags || []).map(tag => `
+                <div class="tag-chip">
+                  <span class="tag-text">${this.escapeHtml(tag)}</span>
+                  <button type="button" class="tag-remove" onclick="app.removeTag('${video.id}', '${this.escapeHtml(tag)}')" aria-label="Remove tag">×</button>
+                </div>
+              `).join('')}
+              <input
+                type="text"
+                class="tag-input"
+                id="tag-input-${video.id}"
+                placeholder="${rendererI18n.t('form.tagsPlaceholder')}"
+                onkeydown="app.handleTagKeydown(event, '${video.id}')"
+                oninput="app.handleTagChange('${video.id}')"
+                onpaste="app.handleTagPaste(event, '${video.id}')"
+              />
+            </div>
+          </div>
+
           <div class="video-actions">
             <button class="btn btn-success" onclick="app.updateVideo('${video.id}')" id="update-btn-${video.id}" style="display: none;">
               ${rendererI18n.t('buttons.updateVideoInfo')}
@@ -957,6 +1175,7 @@ class YouTubeBatchManager {
             }
             this.updateTitleCounter(video.id);
             this.updateDescriptionCounter(video.id);
+            this.updateTagsCounter(video.id);
 
             if (this.findBarVisible) {
               this.setupInputEditListenersForVideo(video.id);
@@ -1013,16 +1232,33 @@ class YouTubeBatchManager {
     const currentPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
     const currentCategoryId = categorySelect?.value || originalVideo.category_id;
 
+    const currentVideo = this.state.allVideos.find(v => v.id === videoId);
+    const currentTags = currentVideo?.tags || [];
+    const originalTags = this.getOriginalTags(videoId);
+
+    const tagsChanged = !this.arraysEqual(currentTags, originalTags);
+
     const hasChanges = currentTitle !== originalVideo.title ||
       currentDescription !== originalVideo.description ||
       currentPrivacyStatus !== originalVideo.privacy_status ||
-      currentCategoryId !== originalVideo.category_id;
+      currentCategoryId !== originalVideo.category_id ||
+      tagsChanged;
 
     if (hasChanges) {
       this.markChanged(videoId);
     } else {
       this.unmarkChanged(videoId);
     }
+  }
+
+  private getOriginalTags(videoId: string): string[] {
+    const originalVideo = this.originalVideosState.get(videoId);
+    return originalVideo?.tags || [];
+  }
+
+  private arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((val, index) => val === b[index]);
   }
 
   handleTextareaResize(textarea: HTMLTextAreaElement): void {

@@ -35,7 +35,8 @@
   "form": {
     "title": "Title",
     "description": "Description",
-    "titleCounter": "{current}/100"
+    "tags": "Tags",
+    "tagsPlaceholder": "Enter tags (comma-separated)"
   },
   "credentials": {
     "required": "Credentials Required",
