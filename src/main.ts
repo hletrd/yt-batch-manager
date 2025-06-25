@@ -23,6 +23,20 @@ interface VideoData {
   thumbnails: Record<string, ThumbnailData>;
   published_at: string;
   privacy_status: string;
+  duration?: string;
+  upload_status?: string;
+  processing_status?: string;
+  processing_progress?: {
+    parts_total?: number;
+    parts_processed?: number;
+    time_left_ms?: number;
+  };
+  statistics?: {
+    view_count?: string;
+    like_count?: string;
+    dislike_count?: string;
+    comment_count?: string;
+  };
 }
 
 interface ThumbnailData {
@@ -35,6 +49,7 @@ interface UpdateRequest {
   video_id: string;
   title: string;
   description: string;
+  privacy_status?: string;
 }
 
 interface BatchUpdateResponse {
@@ -493,7 +508,8 @@ class YouTubeManager {
         if (!nextPageToken) break;
       }
 
-      const videos: VideoData[] = [];
+      const videoIds: string[] = [];
+      const videoSnippetsMap: Record<string, any> = {};
 
       for (const item of playlistItems) {
         try {
@@ -503,34 +519,96 @@ class YouTubeManager {
           if (!resourceId.videoId) continue;
 
           const videoId = resourceId.videoId;
-          const thumbnails = snippet.thumbnails || {};
-
-          const localThumbnails = this.createLocalThumbnailUrls(videoId, thumbnails);
-
-          let thumbnailUrl = '';
-          for (const size of ['medium', 'high', 'default', 'standard']) {
-            if (localThumbnails[size]) {
-              thumbnailUrl = localThumbnails[size].url;
-              break;
-            }
-          }
-
-          const status = item.status || {};
-          const privacyStatus = status.privacyStatus || 'unknown';
-
-          const videoData: VideoData = {
-            id: videoId,
-            title: snippet.title || '',
-            description: snippet.description || '',
-            thumbnail_url: thumbnailUrl,
-            thumbnails: localThumbnails,
-            published_at: snippet.publishedAt || '',
-            privacy_status: privacyStatus,
+          videoIds.push(videoId);
+          videoSnippetsMap[videoId] = {
+            snippet,
+            status: item.status || {},
           };
-
-          videos.push(videoData);
         } catch (error) {
           console.error('Error processing video item:', error);
+          continue;
+        }
+      }
+
+      const videos: VideoData[] = [];
+
+      for (let i = 0; i < videoIds.length; i += 50) {
+        const batchIds = videoIds.slice(i, i + 50);
+
+        try {
+          const videoDetailsResponse = await this.youtube.videos.list({
+            part: 'snippet,contentDetails,status,statistics,processingDetails',
+            id: batchIds.join(','),
+          });
+
+          const videoDetails = videoDetailsResponse.data.items || [];
+
+          for (const videoDetail of videoDetails) {
+            try {
+              const videoId = videoDetail.id;
+              const originalData = videoSnippetsMap[videoId];
+
+              let snippet, thumbnails;
+
+              if (!originalData) {
+                console.log(`Video ${videoId} not found in playlist items (Probably being uploaded)`);
+                console.log(videoDetail);
+                snippet = videoDetail.snippet || {};
+                thumbnails = snippet.thumbnails || {};
+              } else {
+                snippet = originalData.snippet;
+                thumbnails = snippet.thumbnails || {};
+              }
+
+              const localThumbnails = this.createLocalThumbnailUrls(videoId, thumbnails);
+
+              let thumbnailUrl = '';
+              for (const size of ['medium', 'high', 'default', 'standard']) {
+                if (localThumbnails[size]) {
+                  thumbnailUrl = localThumbnails[size].url;
+                  break;
+                }
+              }
+
+              const status = videoDetail.status || {};
+              const contentDetails = videoDetail.contentDetails || {};
+              const statistics = videoDetail.statistics || {};
+              const processingDetails = videoDetail.processingDetails || {};
+
+              const privacyStatus = status.privacyStatus || 'unknown';
+
+              const videoData: VideoData = {
+                id: videoId,
+                title: snippet.title || '',
+                description: snippet.description || '',
+                thumbnail_url: thumbnailUrl,
+                thumbnails: localThumbnails,
+                published_at: snippet.publishedAt || '',
+                privacy_status: privacyStatus,
+                duration: contentDetails.duration || undefined,
+                upload_status: status.uploadStatus || undefined,
+                processing_status: processingDetails.processingStatus || undefined,
+                processing_progress: processingDetails.processingProgress ? {
+                  parts_total: processingDetails.processingProgress.partsTotal || undefined,
+                  parts_processed: processingDetails.processingProgress.partsProcessed || undefined,
+                  time_left_ms: processingDetails.processingProgress.timeLeftMs || undefined,
+                } : undefined,
+                statistics: {
+                  view_count: statistics.viewCount || '0',
+                  like_count: statistics.likeCount || '0',
+                  dislike_count: statistics.dislikeCount || '0',
+                  comment_count: statistics.commentCount || '0',
+                },
+              };
+
+              videos.push(videoData);
+            } catch (error) {
+              console.error('Error processing video detail:', error);
+              continue;
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching video details batch:', error);
           continue;
         }
       }
@@ -543,22 +621,32 @@ class YouTubeManager {
     }
   }
 
-  async updateVideo(videoId: string, title: string, description: string): Promise<boolean> {
+  async updateVideo(videoId: string, title: string, description: string, privacyStatus?: string): Promise<boolean> {
     try {
       if (!this.youtube) {
         throw new Error('YouTube API not authenticated');
       }
 
-      await this.youtube.videos.update({
-        part: 'snippet',
-        requestBody: {
-          id: videoId,
-          snippet: {
-            title,
-            description,
-            categoryId: '22',
-          },
+      const parts = ['snippet'];
+      const requestBody: any = {
+        id: videoId,
+        snippet: {
+          title,
+          description,
+          categoryId: '',
         },
+      };
+
+      if (privacyStatus) {
+        parts.push('status');
+        requestBody.status = {
+          privacyStatus: privacyStatus,
+        };
+      }
+
+      await this.youtube.videos.update({
+        part: parts.join(','),
+        requestBody: requestBody,
       });
 
       return true;
@@ -744,6 +832,13 @@ class ElectronApp {
 
     this.mainWindow.loadFile(path.join(__dirname, '../src/renderer.html'));
 
+    this.mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      if (message.includes('Autofill.enable') || message.includes('Autofill.setAddresses')) {
+        event.preventDefault();
+        return;
+      }
+    });
+
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow?.show();
       this.registerLocalShortcuts();
@@ -847,9 +942,9 @@ class ElectronApp {
       }
     });
 
-    ipcMain.handle('youtube:update-video', async (_, { video_id, title, description }: UpdateRequest) => {
+    ipcMain.handle('youtube:update-video', async (_, { video_id, title, description, privacy_status }: UpdateRequest) => {
       try {
-        const success = await this.youtubeManager.updateVideo(video_id, title, description);
+        const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status);
 
         if (success) {
           const videos = this.youtubeManager.getVideos();
@@ -857,6 +952,9 @@ class ElectronApp {
           if (video) {
             video.title = title;
             video.description = description;
+            if (privacy_status) {
+              video.privacy_status = privacy_status;
+            }
           }
         }
 
@@ -873,7 +971,7 @@ class ElectronApp {
       };
 
       for (const update of updates) {
-        const { video_id, title, description } = update;
+        const { video_id, title, description, privacy_status } = update;
 
         if (!video_id || title === undefined || description === undefined) {
           results.failed.push({
@@ -884,7 +982,7 @@ class ElectronApp {
         }
 
         try {
-          const success = await this.youtubeManager.updateVideo(video_id, title, description);
+          const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status);
 
           if (success) {
             const videos = this.youtubeManager.getVideos();
@@ -892,6 +990,9 @@ class ElectronApp {
             if (video) {
               video.title = title;
               video.description = description;
+              if (privacy_status) {
+                video.privacy_status = privacy_status;
+              }
             }
 
             results.successful.push({ video_id, title });
@@ -1017,8 +1118,6 @@ class ElectronApp {
     ipcMain.handle('youtube:clear-cache', async () => {
       return await this.youtubeManager.clearCache();
     });
-
-
   }
 }
 

@@ -100,7 +100,20 @@
         "loadingVideosFromFile": "Loading video infos from file...",
         "videosLoadedFromFileSuccessfully": "Video infos loaded from file successfully!",
         "loadingSubtextDefault": "Loading video infos. This may take a few moments...",
-        "loadingSubtextFile": "Processing your backup file..."
+        "loadingSubtextFile": "Processing your backup file...",
+        "upload": {
+            "deleted": "Deleted",
+            "failed": "Failed",
+            "processed": "Processed",
+            "rejected": "Rejected",
+            "uploaded": "Uploaded"
+        },
+        "processing": {
+            "failed": "Processing Failed",
+            "processing": "Processing",
+            "succeeded": "Processing Complete",
+            "terminated": "Processing Terminated"
+        }
     },
     "privacy": {
         "public": "Public",

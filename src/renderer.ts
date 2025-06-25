@@ -3,8 +3,8 @@ import rendererI18n from './i18n/renderer-i18n.js';
 interface YouTubeAPI {
   authenticate: () => Promise<{ success: boolean; error?: string }>;
   loadVideos: () => Promise<any>;
-  updateVideo: (data: { video_id: string; title: string; description: string }) => Promise<any>;
-  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string }> }) => Promise<any>;
+  updateVideo: (data: { video_id: string; title: string; description: string; privacy_status?: string }) => Promise<any>;
+  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string; privacy_status?: string }> }) => Promise<any>;
   saveVideos: () => Promise<any>;
   loadFromFile: () => Promise<any>;
   downloadVideoInfo: () => Promise<any>;
@@ -41,6 +41,20 @@ interface VideoData {
   thumbnails: Record<string, ThumbnailData>;
   published_at: string;
   privacy_status: string;
+  duration?: string;
+  upload_status?: string;
+  processing_status?: string;
+  processing_progress?: {
+    parts_total?: number;
+    parts_processed?: number;
+    time_left_ms?: number;
+  };
+  statistics?: {
+    view_count?: string;
+    like_count?: string;
+    dislike_count?: string;
+    comment_count?: string;
+  };
 }
 
 interface ThumbnailData {
@@ -96,6 +110,34 @@ class YouTubeBatchManager {
   private batchSaveInProgress: boolean = false;
   private defaultThumbnail: string = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K';
 
+  private formatDuration(isoDuration?: string): string {
+    if (!isoDuration) return '';
+
+    const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return '';
+
+    const hours = parseInt(match[1] || '0');
+    const minutes = parseInt(match[2] || '0');
+    const seconds = parseInt(match[3] || '0');
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  }
+
+  private formatNumber(num?: string): string {
+    if (!num) return '0';
+    const number = parseInt(num);
+    if (number >= 1000000) {
+      return (number / 1000000).toFixed(1) + 'M';
+    } else if (number >= 1000) {
+      return (number / 1000).toFixed(1) + 'K';
+    } else {
+      return number.toString();
+    }
+  }
 
   constructor() {
     this.initializeTheme();
@@ -144,6 +186,30 @@ class YouTubeBatchManager {
       setTimeout(() => {
         statusEl.classList.remove('show');
       }, 3000);
+    }
+  }
+
+  private showLoadingOverlay(mainText?: string, subText?: string): void {
+    const overlay = document.getElementById('loading-overlay');
+    const mainTextEl = document.getElementById('loading-text');
+    const subTextEl = document.getElementById('loading-subtext');
+
+    if (mainTextEl && mainText) {
+      mainTextEl.textContent = mainText;
+    }
+    if (subTextEl && subText) {
+      subTextEl.textContent = subText;
+    }
+
+    if (overlay) {
+      overlay.classList.add('show');
+    }
+  }
+
+  private hideLoadingOverlay(): void {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+      overlay.classList.remove('show');
     }
   }
 
@@ -213,18 +279,23 @@ class YouTubeBatchManager {
     }
   }
 
-  private hasCurrentChanges(videoId: string, savedTitle: string, savedDescription: string): boolean {
+  private hasCurrentChanges(videoId: string, savedTitle: string, savedDescription: string, savedPrivacyStatus?: string): boolean {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+    const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
     const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
     if (!titleInput || !descriptionInput || !originalVideo) return false;
 
     const currentTitle = titleInput.value;
     const currentDescription = descriptionInput.value;
+    const currentPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
 
-    return (currentTitle !== savedTitle || currentDescription !== savedDescription) &&
-           (currentTitle !== originalVideo.title || currentDescription !== originalVideo.description);
+    const titleChanged = currentTitle !== (savedTitle !== undefined ? savedTitle : originalVideo.title);
+    const descriptionChanged = currentDescription !== (savedDescription !== undefined ? savedDescription : originalVideo.description);
+    const privacyChanged = currentPrivacyStatus !== (savedPrivacyStatus !== undefined ? savedPrivacyStatus : originalVideo.privacy_status);
+
+    return titleChanged || descriptionChanged || privacyChanged;
   }
 
   private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
@@ -272,21 +343,25 @@ class YouTubeBatchManager {
 
     this.batchSaveInProgress = true;
 
-    const savedData = new Map<string, {title: string, description: string}>();
+    const savedData = new Map<string, {title: string, description: string, privacy_status?: string}>();
 
     const updates = Array.from(this.state.changedVideos).map(videoId => {
       const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
       const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+      const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
+      const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
       const title = titleInput.value;
       const description = descriptionInput.value;
+      const privacy_status = (privacySelect?.value !== originalVideo?.privacy_status) ? privacySelect?.value : undefined;
 
-      savedData.set(videoId, { title, description });
+      savedData.set(videoId, { title, description, privacy_status });
 
       return {
         video_id: videoId,
         title,
         description,
+        privacy_status,
       };
     });
 
@@ -325,6 +400,9 @@ class YouTubeBatchManager {
             if (videoIndex !== -1) {
               this.state.allVideos[videoIndex].title = saved.title;
               this.state.allVideos[videoIndex].description = saved.description;
+              if (saved.privacy_status) {
+                this.state.allVideos[videoIndex].privacy_status = saved.privacy_status;
+              }
             }
           });
         } else {
@@ -343,6 +421,9 @@ class YouTubeBatchManager {
             if (videoIndex !== -1) {
               this.state.allVideos[videoIndex].title = saved.title;
               this.state.allVideos[videoIndex].description = saved.description;
+              if (saved.privacy_status) {
+                this.state.allVideos[videoIndex].privacy_status = saved.privacy_status;
+              }
             }
           });
         }
@@ -351,7 +432,7 @@ class YouTubeBatchManager {
           const saved = savedData.get(videoId);
           if (!saved) return;
 
-          if (!this.hasCurrentChanges(videoId, saved.title, saved.description)) {
+          if (!this.hasCurrentChanges(videoId, saved.title, saved.description, saved.privacy_status)) {
             this.state.changedVideos.delete(videoId);
             const updateBtn = document.getElementById(`update-btn-${videoId}`);
             if (updateBtn) {
@@ -434,11 +515,15 @@ class YouTubeBatchManager {
   }
 
   async loadVideos(): Promise<void> {
-    this.showStatus(rendererI18n.t('status.authenticatingAndLoadingVideos'), 'info');
+    this.showLoadingOverlay(
+      rendererI18n.t('status.authenticatingAndLoadingVideos'),
+      rendererI18n.t('status.loadingSubtextDefault')
+    );
 
     try {
       const authResult = await window.youtubeAPI.authenticate();
       if (!authResult.success) {
+        this.hideLoadingOverlay();
         this.showStatus(authResult.error || rendererI18n.t('status.authenticationFailed'), 'error');
         return;
       }
@@ -446,6 +531,8 @@ class YouTubeBatchManager {
       await this.loadChannelInfo();
 
       const result = await window.youtubeAPI.loadVideos();
+
+      this.hideLoadingOverlay();
 
       if (result.success) {
         this.state.allVideos = result.videos;
@@ -464,6 +551,7 @@ class YouTubeBatchManager {
       }
     } catch (error) {
       console.error('Error:', error);
+      this.hideLoadingOverlay();
       this.showStatus(rendererI18n.t('status.errorLoadingVideos'), 'error');
     }
   }
@@ -514,10 +602,15 @@ class YouTubeBatchManager {
   }
 
   async loadFromFile(): Promise<void> {
-    this.showStatus(rendererI18n.t('status.loadingVideosFromFile'), 'info');
+    this.showLoadingOverlay(
+      rendererI18n.t('status.loadingVideosFromFile'),
+      rendererI18n.t('status.loadingSubtextFile')
+    );
 
     try {
       const result = await window.youtubeAPI.loadJsonFile();
+
+      this.hideLoadingOverlay();
 
       if (result.success && !result.cancelled) {
         this.state.allVideos = result.videos;
@@ -538,6 +631,7 @@ class YouTubeBatchManager {
       }
     } catch (error) {
       console.error('Error:', error);
+      this.hideLoadingOverlay();
       this.showStatus(rendererI18n.t('status.failedToLoadVideosFromFile'), 'error');
     }
   }
@@ -545,6 +639,7 @@ class YouTubeBatchManager {
   async updateVideo(videoId: string): Promise<void> {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+    const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
     const updateBtn = document.getElementById(`update-btn-${videoId}`) as HTMLButtonElement;
 
     updateBtn.disabled = true;
@@ -552,14 +647,19 @@ class YouTubeBatchManager {
 
     this.saveInProgress.add(videoId);
 
+    const originalVideo = this.state.allVideos.find(v => v.id === videoId);
+    if (!originalVideo) return;
+
     const savedTitle = titleInput.value;
     const savedDescription = descriptionInput.value;
+    const savedPrivacyStatus = privacySelect?.value !== originalVideo.privacy_status ? privacySelect?.value : undefined;
 
     try {
       const result = await window.youtubeAPI.updateVideo({
         video_id: videoId,
         title: savedTitle,
         description: savedDescription,
+        privacy_status: savedPrivacyStatus,
       });
 
       if (result.success) {
@@ -570,13 +670,21 @@ class YouTubeBatchManager {
           videoTitleEl.textContent = savedTitle;
         }
 
+        const privacyStatusEl = document.querySelector(`[data-video-id="${videoId}"] .privacy-status`);
+        if (privacyStatusEl && privacySelect) {
+          privacyStatusEl.textContent = rendererI18n.t(`privacy.${privacySelect.value}`) || rendererI18n.t('privacy.unknown');
+        }
+
         const videoIndex = this.state.allVideos.findIndex(v => v.id === videoId);
         if (videoIndex !== -1) {
           this.state.allVideos[videoIndex].title = savedTitle;
           this.state.allVideos[videoIndex].description = savedDescription;
+          if (savedPrivacyStatus) {
+            this.state.allVideos[videoIndex].privacy_status = savedPrivacyStatus;
+          }
         }
 
-        if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription)) {
+        if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription, savedPrivacyStatus || originalVideo.privacy_status)) {
           this.state.changedVideos.delete(videoId);
           updateBtn.style.display = 'none';
         }
@@ -669,7 +777,60 @@ class YouTubeBatchManager {
               <div class="video-title">${this.escapeHtml(video.title)}</div>
               <div class="video-published">
                 ${rendererI18n.t('app.published')}: ${video.published_at.substring(0, 10)}
-                ${video.privacy_status ? `<span class="privacy-status">${rendererI18n.t(`privacy.${video.privacy_status}`) || rendererI18n.t('privacy.unknown')}</span>` : ''}
+                ${video.duration ? `<span class="video-duration">${this.formatDuration(video.duration)}</span>` : ''}
+              </div>
+              <div class="video-metadata">
+                <div class="privacy-control">
+                  <select class="privacy-select" id="privacy-${video.id}" onchange="app.handlePrivacyChange('${video.id}')">
+                    <option value="private" ${video.privacy_status === 'private' ? 'selected' : ''}>${rendererI18n.t('privacy.private')}</option>
+                    <option value="unlisted" ${video.privacy_status === 'unlisted' ? 'selected' : ''}>${rendererI18n.t('privacy.unlisted')}</option>
+                    <option value="public" ${video.privacy_status === 'public' ? 'selected' : ''}>${rendererI18n.t('privacy.public')}</option>
+                  </select>
+                </div>
+                ${video.statistics ? `
+                  <div class="video-stats">
+                    <div class="stat-item">
+                      <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                      ${this.formatNumber(video.statistics.view_count)}
+                    </div>
+                    <div class="stat-item">
+                      <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                      </svg>
+                      ${this.formatNumber(video.statistics.like_count)}
+                    </div>
+                    <div class="stat-item">
+                       <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                         <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/>
+                       </svg>
+                       ${this.formatNumber(video.statistics.dislike_count)}
+                     </div>
+                    <div class="stat-item">
+                      <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      ${this.formatNumber(video.statistics.comment_count)}
+                    </div>
+                  </div>
+                ` : ''}
+                ${video.upload_status ? `
+                  <span class="video-status status-${video.upload_status}">
+                    ${rendererI18n.t(`status.upload.${video.upload_status}`) || video.upload_status}
+                  </span>
+                ` : ''}
+                ${video.processing_status && video.processing_status !== 'succeeded' ? `
+                  <span class="video-status status-${video.processing_status}">
+                    ${rendererI18n.t(`status.processing.${video.processing_status}`) || video.processing_status}
+                    ${video.processing_status === 'processing' && video.processing_progress ? `
+                      <span class="processing-info">
+                        (${video.processing_progress.parts_processed || 0}/${video.processing_progress.parts_total || 0})
+                      </span>
+                    ` : ''}
+                  </span>
+                ` : ''}
               </div>
             </div>
           </div>
@@ -733,23 +894,36 @@ class YouTubeBatchManager {
   }
 
   handleTitleChange(videoId: string): void {
-    const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
-    const originalVideo = this.state.allVideos.find(v => v.id === videoId);
-
-    if (titleInput && originalVideo && titleInput.value !== originalVideo.title) {
-      this.markChanged(videoId);
-    } else if (titleInput && originalVideo && titleInput.value === originalVideo.title) {
-      this.unmarkChanged(videoId);
-    }
+    this.checkForChanges(videoId);
   }
 
   handleDescriptionChange(videoId: string): void {
+    this.checkForChanges(videoId);
+  }
+
+  handlePrivacyChange(videoId: string): void {
+    this.checkForChanges(videoId);
+  }
+
+  private checkForChanges(videoId: string): void {
+    const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+    const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
     const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
-    if (descriptionInput && originalVideo && descriptionInput.value !== originalVideo.description) {
+    if (!titleInput || !descriptionInput || !originalVideo) return;
+
+    const currentTitle = titleInput.value;
+    const currentDescription = descriptionInput.value;
+    const currentPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
+
+    const hasChanges = currentTitle !== originalVideo.title ||
+                      currentDescription !== originalVideo.description ||
+                      currentPrivacyStatus !== originalVideo.privacy_status;
+
+    if (hasChanges) {
       this.markChanged(videoId);
-    } else if (descriptionInput && originalVideo && descriptionInput.value === originalVideo.description) {
+    } else {
       this.unmarkChanged(videoId);
     }
   }
