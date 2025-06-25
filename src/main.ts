@@ -104,6 +104,7 @@ class YouTubeManager {
   private youtube: any;
   private videos: VideoData[] = [];
   private thumbnailUrls: Record<string, string> = {};
+  private videoCategories: Record<string, { id: string; title: string }> = {};
 
   constructor() {
     this.oauth2Client = new OAuth2Client();
@@ -441,7 +442,7 @@ class YouTubeManager {
       }
 
       const channelsResponse = await this.youtube.channels.list({
-        part: 'snippet',
+        part: 'snippet,brandingSettings',
         mine: true,
       });
 
@@ -454,6 +455,7 @@ class YouTubeManager {
         name: channel.snippet.title,
         thumbnail: channel.snippet.thumbnails?.default?.url || channel.snippet.thumbnails?.medium?.url,
         id: channel.id,
+        country: channel.brandingSettings?.channel?.country || null,
       };
     } catch (error) {
       console.error(i18n.t('errors.errorFetchingChannelInfo'), error);
@@ -553,12 +555,11 @@ class YouTubeManager {
               let snippet, thumbnails;
 
               if (!originalData) {
-                console.log(`Video ${videoId} not found in playlist items (Probably being uploaded)`);
+                console.log(`Video ${videoId} is not in the playlist items`);
                 console.log(videoDetail);
-                snippet = videoDetail.snippet || {};
-                thumbnails = snippet.thumbnails || {};
+                continue;
               } else {
-                snippet = originalData.snippet;
+                snippet = videoDetail.snippet;
                 thumbnails = snippet.thumbnails || {};
               }
 
@@ -701,6 +702,58 @@ class YouTubeManager {
     }
 
     return null;
+  }
+
+  async getVideoCategories(): Promise<Record<string, { id: string; title: string }>> {
+    try {
+      if (!this.youtube) {
+        throw new Error('YouTube API not authenticated');
+      }
+
+      if (Object.keys(this.videoCategories).length > 0) {
+        return this.videoCategories;
+      }
+
+      const channelInfo = await this.getChannelInfo();
+
+      let regionCode = 'US';
+      if (channelInfo && channelInfo.country) {
+        regionCode = channelInfo.country;
+      } else {
+        const systemLocale = app.getLocale();
+        const localeParts = systemLocale.split('-');
+        if (localeParts.length > 1) {
+          regionCode = localeParts[1];
+        }
+      }
+
+      const locale = app.getLocale().replace('-', '_') || 'en_US';
+
+      const response = await this.youtube.videoCategories.list({
+        part: 'snippet',
+        regionCode: regionCode,
+        hl: locale,
+      });
+
+      const categories: Record<string, { id: string; title: string }> = {};
+
+      if (response.data.items) {
+        for (const category of response.data.items) {
+          if (category.snippet.assignable) {
+            categories[category.id] = {
+              id: category.id,
+              title: category.snippet.title,
+            };
+          }
+        }
+      }
+
+      this.videoCategories = categories;
+      return categories;
+    } catch (error) {
+      console.error('Error fetching video categories:', error);
+      return {};
+    }
   }
 }
 
@@ -1104,6 +1157,11 @@ class ElectronApp {
 
     ipcMain.handle('youtube:clear-cache', async () => {
       return await this.youtubeManager.clearCache();
+    });
+
+    ipcMain.handle('youtube:get-video-categories', async () => {
+      const categories = await this.youtubeManager.getVideoCategories();
+      return { categories };
     });
   }
 }

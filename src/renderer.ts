@@ -3,8 +3,8 @@ import rendererI18n from './i18n/renderer-i18n.js';
 interface YouTubeAPI {
   authenticate: () => Promise<{ success: boolean; error?: string }>;
   loadVideos: () => Promise<any>;
-  updateVideo: (data: { video_id: string; title: string; description: string; privacy_status?: string }) => Promise<any>;
-  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string; privacy_status?: string }> }) => Promise<any>;
+  updateVideo: (data: { video_id: string; title: string; description: string; privacy_status: string; category_id: string }) => Promise<any>;
+  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string; privacy_status: string; category_id: string }> }) => Promise<any>;
   saveVideos: () => Promise<any>;
   loadFromFile: () => Promise<any>;
   downloadVideoInfo: () => Promise<any>;
@@ -19,6 +19,7 @@ interface YouTubeAPI {
   selectCredentialsFile: () => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
   removeStoredCredentials: () => Promise<{ success: boolean; error?: string }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
+  getVideoCategories: () => Promise<{ categories: Record<string, { id: string; title: string }> }>;
 }
 
 declare global {
@@ -41,6 +42,7 @@ interface VideoData {
   thumbnails: Record<string, ThumbnailData>;
   published_at: string;
   privacy_status: string;
+  category_id: string;
   duration?: string;
   upload_status?: string;
   processing_status?: string;
@@ -109,6 +111,7 @@ class YouTubeBatchManager {
   private saveInProgress: Set<string> = new Set();
   private batchSaveInProgress: boolean = false;
   private defaultThumbnail: string = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K';
+  private videoCategories: Record<string, { id: string; title: string }> = {};
 
   private formatDuration(isoDuration?: string): string {
     if (!isoDuration) return '';
@@ -279,10 +282,11 @@ class YouTubeBatchManager {
     }
   }
 
-  private hasCurrentChanges(videoId: string, savedTitle: string, savedDescription: string, savedPrivacyStatus?: string): boolean {
+  private hasCurrentChanges(videoId: string, savedTitle: string, savedDescription: string, savedPrivacyStatus: string, savedCategoryId: string): boolean {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
     const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
+    const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
     const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
     if (!titleInput || !descriptionInput || !originalVideo) return false;
@@ -290,12 +294,14 @@ class YouTubeBatchManager {
     const currentTitle = titleInput.value;
     const currentDescription = descriptionInput.value;
     const currentPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
+    const currentCategoryId = categorySelect?.value || originalVideo.category_id;
 
     const titleChanged = currentTitle !== (savedTitle !== undefined ? savedTitle : originalVideo.title);
     const descriptionChanged = currentDescription !== (savedDescription !== undefined ? savedDescription : originalVideo.description);
     const privacyChanged = currentPrivacyStatus !== (savedPrivacyStatus !== undefined ? savedPrivacyStatus : originalVideo.privacy_status);
+    const categoryChanged = currentCategoryId !== (savedCategoryId !== undefined ? savedCategoryId : originalVideo.category_id);
 
-    return titleChanged || descriptionChanged || privacyChanged;
+    return titleChanged || descriptionChanged || privacyChanged || categoryChanged;
   }
 
   private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
@@ -332,6 +338,27 @@ class YouTubeBatchManager {
     }
   }
 
+  private async loadVideoCategories(): Promise<void> {
+    try {
+      if (Object.keys(this.videoCategories).length === 0) {
+        const result = await window.youtubeAPI.getVideoCategories();
+        if (result.categories) {
+          this.videoCategories = result.categories;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading video categories:', error);
+    }
+  }
+
+  private generateCategoryOptions(selectedCategoryId: string): string {
+    const options = Object.values(this.videoCategories).map(category => {
+      const selected = category.id === selectedCategoryId ? 'selected' : '';
+      return `<option value="${category.id}" ${selected}>${this.escapeHtml(category.title)}</option>`;
+    });
+    return options.join('');
+  }
+
   async saveAllChanges(): Promise<void> {
     if (this.state.changedVideos.size === 0) return;
 
@@ -343,25 +370,28 @@ class YouTubeBatchManager {
 
     this.batchSaveInProgress = true;
 
-    const savedData = new Map<string, {title: string, description: string, privacy_status?: string}>();
+    const savedData = new Map<string, {title: string, description: string, privacy_status: string, category_id: string}>();
 
     const updates = Array.from(this.state.changedVideos).map(videoId => {
       const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
       const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
       const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
+      const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
       const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
       const title = titleInput.value;
       const description = descriptionInput.value;
-      const privacy_status = (privacySelect?.value !== originalVideo?.privacy_status) ? privacySelect?.value : undefined;
+      const privacy_status = (privacySelect?.value !== originalVideo?.privacy_status) ? privacySelect?.value : originalVideo?.privacy_status;
+      const category_id = (categorySelect?.value !== originalVideo?.category_id) ? categorySelect?.value : originalVideo?.category_id;
 
-      savedData.set(videoId, { title, description, privacy_status });
+      savedData.set(videoId, { title, description, privacy_status, category_id });
 
       return {
         video_id: videoId,
         title,
         description,
         privacy_status,
+        category_id,
       };
     });
 
@@ -403,6 +433,9 @@ class YouTubeBatchManager {
               if (saved.privacy_status) {
                 this.state.allVideos[videoIndex].privacy_status = saved.privacy_status;
               }
+              if (saved.category_id) {
+                this.state.allVideos[videoIndex].category_id = saved.category_id;
+              }
             }
           });
         } else {
@@ -424,6 +457,9 @@ class YouTubeBatchManager {
               if (saved.privacy_status) {
                 this.state.allVideos[videoIndex].privacy_status = saved.privacy_status;
               }
+              if (saved.category_id) {
+                this.state.allVideos[videoIndex].category_id = saved.category_id;
+              }
             }
           });
         }
@@ -432,7 +468,7 @@ class YouTubeBatchManager {
           const saved = savedData.get(videoId);
           if (!saved) return;
 
-          if (!this.hasCurrentChanges(videoId, saved.title, saved.description, saved.privacy_status)) {
+          if (!this.hasCurrentChanges(videoId, saved.title, saved.description, saved.privacy_status, saved.category_id)) {
             this.state.changedVideos.delete(videoId);
             const updateBtn = document.getElementById(`update-btn-${videoId}`);
             if (updateBtn) {
@@ -529,6 +565,7 @@ class YouTubeBatchManager {
       }
 
       await this.loadChannelInfo();
+      await this.loadVideoCategories();
 
       const result = await window.youtubeAPI.loadVideos();
 
@@ -623,6 +660,7 @@ class YouTubeBatchManager {
           rendererI18n.t('status.loadingSubtextDefault')
         );
 
+        await this.loadVideoCategories();
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;
@@ -654,6 +692,7 @@ class YouTubeBatchManager {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
     const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
+    const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
     const updateBtn = document.getElementById(`update-btn-${videoId}`) as HTMLButtonElement;
 
     updateBtn.disabled = true;
@@ -666,7 +705,8 @@ class YouTubeBatchManager {
 
     const savedTitle = titleInput.value;
     const savedDescription = descriptionInput.value;
-    const savedPrivacyStatus = privacySelect?.value !== originalVideo.privacy_status ? privacySelect?.value : undefined;
+    const savedPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
+    const savedCategoryId = categorySelect?.value || originalVideo.category_id;
 
     try {
       const result = await window.youtubeAPI.updateVideo({
@@ -674,6 +714,7 @@ class YouTubeBatchManager {
         title: savedTitle,
         description: savedDescription,
         privacy_status: savedPrivacyStatus,
+        category_id: savedCategoryId,
       });
 
       if (result.success) {
@@ -693,12 +734,11 @@ class YouTubeBatchManager {
         if (videoIndex !== -1) {
           this.state.allVideos[videoIndex].title = savedTitle;
           this.state.allVideos[videoIndex].description = savedDescription;
-          if (savedPrivacyStatus) {
-            this.state.allVideos[videoIndex].privacy_status = savedPrivacyStatus;
-          }
+          this.state.allVideos[videoIndex].privacy_status = savedPrivacyStatus;
+          this.state.allVideos[videoIndex].category_id = savedCategoryId;
         }
 
-        if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription, savedPrivacyStatus || originalVideo.privacy_status)) {
+        if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription, savedPrivacyStatus, savedCategoryId)) {
           this.state.changedVideos.delete(videoId);
           updateBtn.style.display = 'none';
         }
@@ -775,6 +815,8 @@ class YouTubeBatchManager {
       const thumbnailUrl = await this.getThumbnailDataUrl(video.thumbnail_url.replace('cache://', ''));
       const filename = video.thumbnail_url.replace('cache://', '');
 
+      console.log(video);
+
       const videoHTML = `
         <div class="video-item" data-video-id="${video.id}">
           <div class="video-header">
@@ -802,6 +844,11 @@ class YouTubeBatchManager {
                     <option value="private" ${video.privacy_status === 'private' ? 'selected' : ''}>${rendererI18n.t('privacy.private')}</option>
                     <option value="unlisted" ${video.privacy_status === 'unlisted' ? 'selected' : ''}>${rendererI18n.t('privacy.unlisted')}</option>
                     <option value="public" ${video.privacy_status === 'public' ? 'selected' : ''}>${rendererI18n.t('privacy.public')}</option>
+                  </select>
+                </div>
+                <div class="category-control">
+                  <select class="category-select" id="category-${video.id}" onchange="app.handleCategoryChange('${video.id}')">
+                    ${this.generateCategoryOptions(video.category_id)}
                   </select>
                 </div>
                 ${video.statistics ? `
@@ -930,10 +977,15 @@ class YouTubeBatchManager {
     this.checkForChanges(videoId);
   }
 
-  private checkForChanges(videoId: string): void {
+  handleCategoryChange(videoId: string): void {
+    this.checkForChanges(videoId);
+  }
+
+    private checkForChanges(videoId: string): void {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
     const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
+    const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
     const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
     if (!titleInput || !descriptionInput || !originalVideo) return;
@@ -941,10 +993,12 @@ class YouTubeBatchManager {
     const currentTitle = titleInput.value;
     const currentDescription = descriptionInput.value;
     const currentPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
+    const currentCategoryId = categorySelect?.value || originalVideo.category_id;
 
     const hasChanges = currentTitle !== originalVideo.title ||
-                      currentDescription !== originalVideo.description ||
-                      currentPrivacyStatus !== originalVideo.privacy_status;
+      currentDescription !== originalVideo.description ||
+      currentPrivacyStatus !== originalVideo.privacy_status ||
+      currentCategoryId !== originalVideo.category_id;
 
     if (hasChanges) {
       this.markChanged(videoId);
@@ -1012,6 +1066,9 @@ class YouTubeBatchManager {
       const burgerMenu = document.querySelector('.burger-menu');
       if (window.innerWidth > 768) {
         mobileMenu?.classList.remove('hide');
+        burgerMenu?.classList.remove('active');
+      } else {
+        mobileMenu?.classList.add('hide');
         burgerMenu?.classList.remove('active');
       }
     });
@@ -1500,6 +1557,7 @@ class YouTubeBatchManager {
 
       const result = await window.youtubeAPI.getVideos();
       if (result.videos && result.videos.length > 0) {
+        await this.loadVideoCategories();
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;

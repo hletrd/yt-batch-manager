@@ -19,6 +19,7 @@ interface YouTubeAPI {
   selectCredentialsFile: () => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
   removeStoredCredentials: () => Promise<{ success: boolean; error?: string }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
+  getVideoCategories: () => Promise<{ categories: Record<string, { id: string; title: string }> }>;
 }
 
 const youtubeAPI: YouTubeAPI = {
@@ -40,6 +41,7 @@ const youtubeAPI: YouTubeAPI = {
   selectCredentialsFile: () => ipcRenderer.invoke('youtube:select-credentials-file'),
   removeStoredCredentials: () => ipcRenderer.invoke('youtube:remove-stored-credentials'),
   clearCache: () => ipcRenderer.invoke('youtube:clear-cache'),
+  getVideoCategories: () => ipcRenderer.invoke('youtube:get-video-categories'),
 };
 
 const electronAPI = {
