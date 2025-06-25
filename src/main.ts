@@ -25,6 +25,7 @@ interface VideoData {
   privacy_status: string;
   category_id: string;
   tags?: string[];
+  defaultAudioLanguage?: string;
   duration?: string;
   upload_status?: string;
   processing_status?: string;
@@ -54,6 +55,7 @@ interface UpdateRequest {
   privacy_status: string;
   category_id: string;
   tags?: string[];
+  defaultAudioLanguage?: string;
 }
 
 interface BatchUpdateResponse {
@@ -107,6 +109,7 @@ class YouTubeManager {
   private videos: VideoData[] = [];
   private thumbnailUrls: Record<string, string> = {};
   private videoCategories: Record<string, { id: string; title: string }> = {};
+  private i18nLanguages: Record<string, { id: string; name: string }> = {};
 
   constructor() {
     this.oauth2Client = new OAuth2Client();
@@ -575,6 +578,8 @@ class YouTubeManager {
                 }
               }
 
+              console.log(snippet);
+
               const status = videoDetail.status || {};
               const contentDetails = videoDetail.contentDetails || {};
               const statistics = videoDetail.statistics || {};
@@ -592,6 +597,7 @@ class YouTubeManager {
                 privacy_status: privacyStatus,
                 category_id: snippet.categoryId,
                 tags: snippet.tags || [],
+                defaultAudioLanguage: snippet.defaultAudioLanguage || undefined,
                 duration: contentDetails.duration || undefined,
                 upload_status: status.uploadStatus || undefined,
                 processing_status: processingDetails.processingStatus || undefined,
@@ -628,7 +634,7 @@ class YouTubeManager {
     }
   }
 
-  async updateVideo(videoId: string, title: string, description: string, privacyStatus: string, categoryId: string, tags?: string[]): Promise<boolean> {
+  async updateVideo(videoId: string, title: string, description: string, privacyStatus: string, categoryId: string, tags?: string[], defaultAudioLanguage?: string): Promise<boolean> {
     try {
       if (!this.youtube) {
         throw new Error('YouTube API not authenticated');
@@ -644,6 +650,10 @@ class YouTubeManager {
           tags: tags || [],
         },
       };
+
+      if (defaultAudioLanguage) {
+        requestBody.snippet.defaultAudioLanguage = defaultAudioLanguage;
+      }
 
       if (privacyStatus) {
         parts.push('status');
@@ -756,6 +766,42 @@ class YouTubeManager {
       return categories;
     } catch (error) {
       console.error('Error fetching video categories:', error);
+      return {};
+    }
+  }
+
+  async getI18nLanguages(): Promise<Record<string, { id: string; name: string }>> {
+    try {
+      if (!this.youtube) {
+        throw new Error('YouTube API not authenticated');
+      }
+
+      if (Object.keys(this.i18nLanguages).length > 0) {
+        return this.i18nLanguages;
+      }
+
+      const locale = app.getLocale().replace('-', '_') || 'en_US';
+
+      const response = await this.youtube.i18nLanguages.list({
+        part: 'snippet',
+        hl: locale,
+      });
+
+      const languages: Record<string, { id: string; name: string }> = {};
+
+      if (response.data.items) {
+        for (const language of response.data.items) {
+          languages[language.id] = {
+            id: language.id,
+            name: language.snippet.name,
+          };
+        }
+      }
+
+      this.i18nLanguages = languages;
+      return languages;
+    } catch (error) {
+      console.error('Error fetching i18n languages:', error);
       return {};
     }
   }
@@ -988,9 +1034,9 @@ class ElectronApp {
       }
     });
 
-    ipcMain.handle('youtube:update-video', async (_, { video_id, title, description, privacy_status, category_id, tags }: UpdateRequest) => {
+    ipcMain.handle('youtube:update-video', async (_, { video_id, title, description, privacy_status, category_id, tags, defaultAudioLanguage }: UpdateRequest) => {
       try {
-        const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status, category_id, tags);
+        const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status, category_id, tags, defaultAudioLanguage);
 
         if (success) {
           const videos = this.youtubeManager.getVideos();
@@ -1001,6 +1047,7 @@ class ElectronApp {
             video.privacy_status = privacy_status;
             video.category_id = category_id;
             video.tags = tags || [];
+            video.defaultAudioLanguage = defaultAudioLanguage;
           }
         }
 
@@ -1017,7 +1064,7 @@ class ElectronApp {
       };
 
       for (const update of updates) {
-        const { video_id, title, description, privacy_status, category_id, tags } = update;
+        const { video_id, title, description, privacy_status, category_id, tags, defaultAudioLanguage } = update;
 
         if (!video_id || title === undefined || description === undefined) {
           results.failed.push({
@@ -1028,7 +1075,7 @@ class ElectronApp {
         }
 
         try {
-          const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status, category_id, tags);
+          const success = await this.youtubeManager.updateVideo(video_id, title, description, privacy_status, category_id, tags, defaultAudioLanguage);
 
           if (success) {
             const videos = this.youtubeManager.getVideos();
@@ -1039,6 +1086,7 @@ class ElectronApp {
               video.privacy_status = privacy_status;
               video.category_id = category_id;
               video.tags = tags || [];
+              video.defaultAudioLanguage = defaultAudioLanguage;
             }
 
             results.successful.push({ video_id, title });
@@ -1168,6 +1216,11 @@ class ElectronApp {
     ipcMain.handle('youtube:get-video-categories', async () => {
       const categories = await this.youtubeManager.getVideoCategories();
       return { categories };
+    });
+
+    ipcMain.handle('youtube:get-i18n-languages', async () => {
+      const languages = await this.youtubeManager.getI18nLanguages();
+      return { languages };
     });
   }
 }

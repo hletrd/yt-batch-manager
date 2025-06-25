@@ -3,8 +3,8 @@ import rendererI18n from './i18n/renderer-i18n.js';
 interface YouTubeAPI {
   authenticate: () => Promise<{ success: boolean; error?: string }>;
   loadVideos: () => Promise<any>;
-  updateVideo: (data: { video_id: string; title: string; description: string; privacy_status: string; category_id: string; tags?: string[] }) => Promise<any>;
-  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string; privacy_status: string; category_id: string; tags?: string[] }> }) => Promise<any>;
+  updateVideo: (data: { video_id: string; title: string; description: string; privacy_status: string; category_id: string; tags?: string[]; defaultAudioLanguage?: string }) => Promise<any>;
+  updateVideosBatch: (data: { updates: Array<{ video_id: string; title: string; description: string; privacy_status: string; category_id: string; tags?: string[]; defaultAudioLanguage?: string }> }) => Promise<any>;
   saveVideos: () => Promise<any>;
   loadFromFile: () => Promise<any>;
   downloadVideoInfo: () => Promise<any>;
@@ -20,6 +20,7 @@ interface YouTubeAPI {
   removeStoredCredentials: () => Promise<{ success: boolean; error?: string }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
   getVideoCategories: () => Promise<{ categories: Record<string, { id: string; title: string }> }>;
+  getI18nLanguages: () => Promise<{ languages: Record<string, { id: string; name: string }> }>;
 }
 
 declare global {
@@ -44,6 +45,7 @@ interface VideoData {
   privacy_status: string;
   category_id: string;
   tags?: string[];
+  defaultAudioLanguage?: string;
   duration?: string;
   upload_status?: string;
   processing_status?: string;
@@ -114,6 +116,7 @@ class YouTubeBatchManager {
   private batchSaveInProgress: boolean = false;
   private defaultThumbnail: string = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiB2aWV3Qm94PSIwIDAgMTIwIDkwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjkwIiBmaWxsPSIjRkZGIiBzdHJva2U9IiNEREQiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI0MCIgeT0iMjUiPgo8cGF0aCBkPSJNMzUgMjBMMTAgMzBWMTBMMzUgMjBaIiBmaWxsPSIjQ0NDIi8+Cjwvc3ZnPgo8L3N2Zz4K';
   private videoCategories: Record<string, { id: string; title: string }> = {};
+  private i18nLanguages: Record<string, { id: string; name: string }> = {};
 
   private formatDuration(isoDuration?: string): string {
     if (!isoDuration) return '';
@@ -284,11 +287,12 @@ class YouTubeBatchManager {
     }
   }
 
-  private hasCurrentChanges(videoId: string, savedTitle: string, savedDescription: string, savedPrivacyStatus: string, savedCategoryId: string): boolean {
+  private hasCurrentChanges(videoId: string, savedTitle: string, savedDescription: string, savedPrivacyStatus: string, savedCategoryId: string, savedDefaultAudioLanguage?: string): boolean {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
     const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
     const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
+    const languageSelect = document.getElementById(`language-${videoId}`) as HTMLSelectElement;
     const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
     if (!titleInput || !descriptionInput || !originalVideo) return false;
@@ -297,13 +301,15 @@ class YouTubeBatchManager {
     const currentDescription = descriptionInput.value;
     const currentPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
     const currentCategoryId = categorySelect?.value || originalVideo.category_id;
+    const currentDefaultAudioLanguage = languageSelect?.value || '';
 
     const titleChanged = currentTitle !== (savedTitle !== undefined ? savedTitle : originalVideo.title);
     const descriptionChanged = currentDescription !== (savedDescription !== undefined ? savedDescription : originalVideo.description);
     const privacyChanged = currentPrivacyStatus !== (savedPrivacyStatus !== undefined ? savedPrivacyStatus : originalVideo.privacy_status);
     const categoryChanged = currentCategoryId !== (savedCategoryId !== undefined ? savedCategoryId : originalVideo.category_id);
+    const languageChanged = currentDefaultAudioLanguage !== (savedDefaultAudioLanguage !== undefined ? savedDefaultAudioLanguage || '' : originalVideo.defaultAudioLanguage || '');
 
-    return titleChanged || descriptionChanged || privacyChanged || categoryChanged;
+    return titleChanged || descriptionChanged || privacyChanged || categoryChanged || languageChanged;
   }
 
   private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
@@ -434,6 +440,16 @@ class YouTubeBatchManager {
     setTimeout(() => input.focus(), 0);
   }
 
+  handleTagBlur(event: FocusEvent, videoId: string): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.trim();
+
+    if (value) {
+      this.processTagInput(videoId, value);
+      input.value = '';
+    }
+  }
+
   addTag(videoId: string, tagText: string): void {
     if (!tagText.trim()) return;
 
@@ -513,6 +529,7 @@ class YouTubeBatchManager {
         onkeydown="app.handleTagKeydown(event, '${videoId}')"
         oninput="app.handleTagChange('${videoId}')"
         onpaste="app.handleTagPaste(event, '${videoId}')"
+        onblur="app.handleTagBlur(event, '${videoId}')"
       />
     `;
 
@@ -545,6 +562,28 @@ class YouTubeBatchManager {
     return options.join('');
   }
 
+  private async loadI18nLanguages(): Promise<void> {
+    try {
+      if (Object.keys(this.i18nLanguages).length === 0) {
+        const result = await window.youtubeAPI.getI18nLanguages();
+        if (result.languages) {
+          this.i18nLanguages = result.languages;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading i18n languages:', error);
+    }
+  }
+
+  private generateLanguageOptions(selectedLanguageId?: string): string {
+    const defaultOption = '<option value="">(None)</option>';
+    const options = Object.values(this.i18nLanguages).map(language => {
+      const selected = language.id === selectedLanguageId ? 'selected' : '';
+      return `<option value="${language.id}" ${selected}>${this.escapeHtml(language.name)}</option>`;
+    });
+    return defaultOption + options.join('');
+  }
+
   async saveAllChanges(): Promise<void> {
     if (this.state.changedVideos.size === 0) return;
 
@@ -556,13 +595,14 @@ class YouTubeBatchManager {
 
     this.batchSaveInProgress = true;
 
-    const savedData = new Map<string, {title: string, description: string, privacy_status: string, category_id: string, tags: string[]}>();
+    const savedData = new Map<string, {title: string, description: string, privacy_status: string, category_id: string, tags: string[], defaultAudioLanguage?: string}>();
 
     const updates = Array.from(this.state.changedVideos).map(videoId => {
       const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
       const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
       const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
       const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
+      const languageSelect = document.getElementById(`language-${videoId}`) as HTMLSelectElement;
       const originalVideo = this.state.allVideos.find(v => v.id === videoId);
       const currentVideo = this.state.allVideos.find(v => v.id === videoId);
 
@@ -570,9 +610,10 @@ class YouTubeBatchManager {
       const description = descriptionInput.value;
       const privacy_status = (privacySelect?.value !== originalVideo?.privacy_status) ? privacySelect?.value : originalVideo?.privacy_status;
       const category_id = (categorySelect?.value !== originalVideo?.category_id) ? categorySelect?.value : originalVideo?.category_id;
+      const defaultAudioLanguage = languageSelect?.value || undefined;
       const tags = currentVideo?.tags || [];
 
-      savedData.set(videoId, { title, description, privacy_status, category_id, tags });
+      savedData.set(videoId, { title, description, privacy_status, category_id, tags, defaultAudioLanguage });
 
       return {
         video_id: videoId,
@@ -581,6 +622,7 @@ class YouTubeBatchManager {
         privacy_status,
         category_id,
         tags,
+        defaultAudioLanguage,
       };
     });
 
@@ -626,6 +668,7 @@ class YouTubeBatchManager {
                 this.state.allVideos[videoIndex].category_id = saved.category_id;
               }
               this.state.allVideos[videoIndex].tags = saved.tags;
+              this.state.allVideos[videoIndex].defaultAudioLanguage = saved.defaultAudioLanguage;
             }
           });
         } else {
@@ -651,6 +694,7 @@ class YouTubeBatchManager {
                 this.state.allVideos[videoIndex].category_id = saved.category_id;
               }
               this.state.allVideos[videoIndex].tags = saved.tags;
+              this.state.allVideos[videoIndex].defaultAudioLanguage = saved.defaultAudioLanguage;
             }
           });
         }
@@ -659,7 +703,7 @@ class YouTubeBatchManager {
           const saved = savedData.get(videoId);
           if (!saved) return;
 
-          if (!this.hasCurrentChanges(videoId, saved.title, saved.description, saved.privacy_status, saved.category_id)) {
+          if (!this.hasCurrentChanges(videoId, saved.title, saved.description, saved.privacy_status, saved.category_id, saved.defaultAudioLanguage)) {
             this.state.changedVideos.delete(videoId);
             const updateBtn = document.getElementById(`update-btn-${videoId}`);
             if (updateBtn) {
@@ -757,6 +801,7 @@ class YouTubeBatchManager {
 
       await this.loadChannelInfo();
       await this.loadVideoCategories();
+      await this.loadI18nLanguages();
 
       const result = await window.youtubeAPI.loadVideos();
 
@@ -858,6 +903,7 @@ class YouTubeBatchManager {
         );
 
         await this.loadVideoCategories();
+        await this.loadI18nLanguages();
         this.state.allVideos = result.videos;
 
         this.originalVideosState.clear();
@@ -896,6 +942,7 @@ class YouTubeBatchManager {
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
     const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
     const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
+    const languageSelect = document.getElementById(`language-${videoId}`) as HTMLSelectElement;
     const updateBtn = document.getElementById(`update-btn-${videoId}`) as HTMLButtonElement;
 
     updateBtn.disabled = true;
@@ -910,6 +957,7 @@ class YouTubeBatchManager {
     const savedDescription = descriptionInput.value;
     const savedPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
     const savedCategoryId = categorySelect?.value || originalVideo.category_id;
+    const savedDefaultAudioLanguage = languageSelect?.value || undefined;
     const currentVideo = this.state.allVideos.find(v => v.id === videoId);
     const savedTags = currentVideo?.tags || [];
 
@@ -921,6 +969,7 @@ class YouTubeBatchManager {
         privacy_status: savedPrivacyStatus,
         category_id: savedCategoryId,
         tags: savedTags,
+        defaultAudioLanguage: savedDefaultAudioLanguage,
       });
 
       if (result.success) {
@@ -943,6 +992,7 @@ class YouTubeBatchManager {
           this.state.allVideos[videoIndex].privacy_status = savedPrivacyStatus;
           this.state.allVideos[videoIndex].category_id = savedCategoryId;
           this.state.allVideos[videoIndex].tags = savedTags;
+          this.state.allVideos[videoIndex].defaultAudioLanguage = savedDefaultAudioLanguage;
         }
 
         this.originalVideosState.set(videoId, {
@@ -950,7 +1000,7 @@ class YouTubeBatchManager {
           tags: [...savedTags]
         });
 
-        if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription, savedPrivacyStatus, savedCategoryId)) {
+        if (!this.hasCurrentChanges(videoId, savedTitle, savedDescription, savedPrivacyStatus, savedCategoryId, savedDefaultAudioLanguage)) {
           this.state.changedVideos.delete(videoId);
           updateBtn.style.display = 'none';
         }
@@ -1063,6 +1113,11 @@ class YouTubeBatchManager {
                     ${this.generateCategoryOptions(video.category_id)}
                   </select>
                 </div>
+                <div class="language-control">
+                  <select class="language-select" id="language-${video.id}" onchange="app.handleLanguageChange('${video.id}')">
+                    ${this.generateLanguageOptions(video.defaultAudioLanguage)}
+                  </select>
+                </div>
                 ${video.statistics ? `
                   <div class="video-stats">
                     <div class="stat-item">
@@ -1151,6 +1206,7 @@ class YouTubeBatchManager {
                 onkeydown="app.handleTagKeydown(event, '${video.id}')"
                 oninput="app.handleTagChange('${video.id}')"
                 onpaste="app.handleTagPaste(event, '${video.id}')"
+                onblur="app.handleTagBlur(event, '${video.id}')"
               />
             </div>
           </div>
@@ -1218,11 +1274,16 @@ class YouTubeBatchManager {
     this.checkForChanges(videoId);
   }
 
+  handleLanguageChange(videoId: string): void {
+    this.checkForChanges(videoId);
+  }
+
     private checkForChanges(videoId: string): void {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
     const privacySelect = document.getElementById(`privacy-${videoId}`) as HTMLSelectElement;
     const categorySelect = document.getElementById(`category-${videoId}`) as HTMLSelectElement;
+    const languageSelect = document.getElementById(`language-${videoId}`) as HTMLSelectElement;
     const originalVideo = this.state.allVideos.find(v => v.id === videoId);
 
     if (!titleInput || !descriptionInput || !originalVideo) return;
@@ -1231,6 +1292,7 @@ class YouTubeBatchManager {
     const currentDescription = descriptionInput.value;
     const currentPrivacyStatus = privacySelect?.value || originalVideo.privacy_status;
     const currentCategoryId = categorySelect?.value || originalVideo.category_id;
+    const currentLanguage = languageSelect?.value || originalVideo.defaultAudioLanguage || '';
 
     const currentVideo = this.state.allVideos.find(v => v.id === videoId);
     const currentTags = currentVideo?.tags || [];
@@ -1242,6 +1304,7 @@ class YouTubeBatchManager {
       currentDescription !== originalVideo.description ||
       currentPrivacyStatus !== originalVideo.privacy_status ||
       currentCategoryId !== originalVideo.category_id ||
+      currentLanguage !== (originalVideo.defaultAudioLanguage || '') ||
       tagsChanged;
 
     if (hasChanges) {
@@ -1812,6 +1875,7 @@ class YouTubeBatchManager {
       const result = await window.youtubeAPI.getVideos();
       if (result.videos && result.videos.length > 0) {
         await this.loadVideoCategories();
+        await this.loadI18nLanguages();
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;

@@ -20,6 +20,7 @@ interface YouTubeAPI {
   removeStoredCredentials: () => Promise<{ success: boolean; error?: string }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
   getVideoCategories: () => Promise<{ categories: Record<string, { id: string; title: string }> }>;
+  getI18nLanguages: () => Promise<{ languages: Record<string, { id: string; name: string }> }>;
 }
 
 const youtubeAPI: YouTubeAPI = {
@@ -42,6 +43,7 @@ const youtubeAPI: YouTubeAPI = {
   removeStoredCredentials: () => ipcRenderer.invoke('youtube:remove-stored-credentials'),
   clearCache: () => ipcRenderer.invoke('youtube:clear-cache'),
   getVideoCategories: () => ipcRenderer.invoke('youtube:get-video-categories'),
+  getI18nLanguages: () => ipcRenderer.invoke('youtube:get-i18n-languages'),
 };
 
 const electronAPI = {
