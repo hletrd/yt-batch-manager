@@ -476,7 +476,7 @@ class YouTubeBatchManager {
     dropdown?.classList.toggle('show');
   }
 
-  sortVideos(sortType: string): void {
+  async sortVideos(sortType: string): Promise<void> {
     this.state.currentSort = sortType;
     const sortKeys: Record<string, string> = {
       'date-desc': 'sorting.dateNewestFirst',
@@ -494,7 +494,7 @@ class YouTubeBatchManager {
 
     this.sortAllVideos();
     this.state.currentPage = 0;
-    this.renderVideos(true);
+    await this.renderVideos(true);
   }
 
   private sortAllVideos(): void {
@@ -538,7 +538,7 @@ class YouTubeBatchManager {
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;
-        this.renderVideos(true);
+        await this.renderVideos(true);
         this.showStatus(rendererI18n.t('status.videosLoadedSuccessfully', { count: result.count }), 'success');
 
         const saveJsonLink = document.getElementById('save-json-link') as HTMLAnchorElement;
@@ -616,7 +616,7 @@ class YouTubeBatchManager {
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;
-        this.renderVideos(true);
+        await this.renderVideos(true);
         this.showStatus(rendererI18n.t('status.videosLoadedFromFileSuccessfully'), 'success');
 
         const saveJsonLink = document.getElementById('save-json-link') as HTMLAnchorElement;
@@ -729,7 +729,7 @@ class YouTubeBatchManager {
     }
   }
 
-  private renderVideos(clear: boolean = false): void {
+  private async renderVideos(clear: boolean = false): Promise<void> {
     const videoList = document.getElementById('video-list');
     if (!videoList) return;
 
@@ -754,7 +754,7 @@ class YouTubeBatchManager {
       return;
     }
 
-    videosToAdd.forEach(async (video) => {
+    for (const video of videosToAdd) {
       const thumbnailUrl = await this.getThumbnailDataUrl(video.thumbnail_url.replace('cache://', ''));
       const filename = video.thumbnail_url.replace('cache://', '');
 
@@ -880,7 +880,7 @@ class YouTubeBatchManager {
           }
         }, 10);
       });
-    });
+    }
 
     this.state.displayedVideos = this.state.displayedVideos.concat(videosToAdd);
     this.state.currentPage++;
@@ -942,7 +942,7 @@ class YouTubeBatchManager {
     }
   }
 
-  private handleScroll(): void {
+  private async handleScroll(): Promise<void> {
     if (this.state.isLoading || this.state.displayedVideos.length >= this.state.allVideos.length) return;
 
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -951,7 +951,7 @@ class YouTubeBatchManager {
 
     if (scrollTop + windowHeight >= documentHeight - 1000) {
       this.state.isLoading = true;
-      this.renderVideos();
+      await this.renderVideos();
     }
   }
 
@@ -1478,7 +1478,7 @@ class YouTubeBatchManager {
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;
-        this.renderVideos(true);
+        await this.renderVideos(true);
 
         const saveJsonLink = document.getElementById('save-json-link') as HTMLAnchorElement;
         if (saveJsonLink) {
