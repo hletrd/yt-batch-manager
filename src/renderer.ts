@@ -322,7 +322,7 @@ class YouTubeBatchManager {
     }
   }
 
-  private updateTitleCounter(videoId: string): void {
+  updateTitleCounter(videoId: string): void {
     const titleInput = document.getElementById(`title-${videoId}`) as HTMLInputElement;
     const counter = document.getElementById(`title-counter-${videoId}`);
 
@@ -331,6 +331,22 @@ class YouTubeBatchManager {
       counter.textContent = `${length}/100`;
 
       if (length > 100) {
+        counter.classList.add('warning');
+      } else {
+        counter.classList.remove('warning');
+      }
+    }
+  }
+
+  updateDescriptionCounter(videoId: string): void {
+    const descriptionInput = document.getElementById(`description-${videoId}`) as HTMLTextAreaElement;
+    const counter = document.getElementById(`description-counter-${videoId}`);
+
+    if (descriptionInput && counter) {
+      const length = descriptionInput.value.length;
+      counter.textContent = `${length}/5000`;
+
+      if (length > 5000) {
         counter.classList.add('warning');
       } else {
         counter.classList.remove('warning');
@@ -835,7 +851,7 @@ class YouTubeBatchManager {
               </a>
               <div class="video-title">${this.escapeHtml(video.title)}</div>
               <div class="video-published">
-                ${rendererI18n.t('app.published')}: ${video.published_at.substring(0, 10)}
+                <span class="video-published-text">${rendererI18n.t('app.published')}</span> ${video.published_at.substring(0, 10)}
                 ${video.duration ? `<span class="video-duration">${this.formatDuration(video.duration)}</span>` : ''}
               </div>
               <div class="video-metadata">
@@ -901,6 +917,7 @@ class YouTubeBatchManager {
 
           <div class="form-group">
             <label for="title-${video.id}">${rendererI18n.t('form.title')}</label>
+            <div class="title-counter" id="title-counter-${video.id}">${video.title.length}/100</div>
             <input
               type="text"
               class="form-control title-input"
@@ -908,15 +925,15 @@ class YouTubeBatchManager {
               value="${this.escapeHtml(video.title)}"
               oninput="app.handleTitleChange('${video.id}'); app.updateTitleCounter('${video.id}')"
             />
-            <div class="title-counter" id="title-counter-${video.id}">${video.title.length}/100</div>
           </div>
 
           <div class="form-group">
             <label for="description-${video.id}">${rendererI18n.t('form.description')}</label>
+            <div class="description-counter" id="description-counter-${video.id}">${video.description.length}/5000</div>
             <textarea
               class="form-control"
               id="description-${video.id}"
-              oninput="app.handleDescriptionChange('${video.id}'); app.handleTextareaResize(this)"
+              oninput="app.handleDescriptionChange('${video.id}'); app.handleTextareaResize(this); app.updateDescriptionCounter('${video.id}')"
             >${this.escapeHtml(video.description)}</textarea>
           </div>
 
@@ -939,6 +956,7 @@ class YouTubeBatchManager {
               this.autoResizeTextarea(textarea);
             }
             this.updateTitleCounter(video.id);
+            this.updateDescriptionCounter(video.id);
 
             if (this.findBarVisible) {
               this.setupInputEditListenersForVideo(video.id);
