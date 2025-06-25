@@ -68,6 +68,10 @@
     ],
     "artifactName": "${productName}-${version}-${arch}.${ext}",
     "icon": "assets/icon.png",
+    "electronLanguages": [
+      "en",
+      "ko"
+    ],
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
