@@ -95,6 +95,7 @@
         "videosSavedSuccessfully": "Video infos saved.",
         "errorSavingVideos": "Error saving video infos",
         "authenticatingAndLoadingVideos": "Authenticating and Loading video infos from YouTube...",
+        "loadingVideos": "Loading videos...",
         "preparingDownload": "Preparing to save...",
         "downloadCancelled": "Save cancelled",
         "loadingVideosFromFile": "Loading video infos from file...",

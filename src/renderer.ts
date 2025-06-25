@@ -523,8 +523,8 @@ class YouTubeBatchManager {
     try {
       const authResult = await window.youtubeAPI.authenticate();
       if (!authResult.success) {
-        this.hideLoadingOverlay();
         this.showStatus(authResult.error || rendererI18n.t('status.authenticationFailed'), 'error');
+        this.hideLoadingOverlay();
         return;
       }
 
@@ -532,14 +532,20 @@ class YouTubeBatchManager {
 
       const result = await window.youtubeAPI.loadVideos();
 
-      this.hideLoadingOverlay();
-
       if (result.success) {
+        this.showLoadingOverlay(
+          rendererI18n.t('status.loadingVideos'),
+          rendererI18n.t('status.loadingSubtextDefault')
+        );
+
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;
         await this.renderVideos(true);
+
         this.showStatus(rendererI18n.t('status.videosLoadedSuccessfully', { count: result.count }), 'success');
+
+        this.hideLoadingOverlay();
 
         const saveJsonLink = document.getElementById('save-json-link') as HTMLAnchorElement;
         if (saveJsonLink) {
@@ -548,11 +554,12 @@ class YouTubeBatchManager {
         }
       } else {
         this.showStatus(result.error || rendererI18n.t('errors.errorLoadingVideos'), 'error');
+        this.hideLoadingOverlay();
       }
     } catch (error) {
       console.error('Error:', error);
-      this.hideLoadingOverlay();
       this.showStatus(rendererI18n.t('status.errorLoadingVideos'), 'error');
+      this.hideLoadingOverlay();
     }
   }
 
@@ -610,14 +617,19 @@ class YouTubeBatchManager {
     try {
       const result = await window.youtubeAPI.loadJsonFile();
 
-      this.hideLoadingOverlay();
-
       if (result.success && !result.cancelled) {
+        this.showLoadingOverlay(
+          rendererI18n.t('status.loadingVideos'),
+          rendererI18n.t('status.loadingSubtextDefault')
+        );
+
         this.state.allVideos = result.videos;
         this.sortAllVideos();
         this.state.currentPage = 0;
         await this.renderVideos(true);
+
         this.showStatus(rendererI18n.t('status.videosLoadedFromFileSuccessfully'), 'success');
+        this.hideLoadingOverlay();
 
         const saveJsonLink = document.getElementById('save-json-link') as HTMLAnchorElement;
         if (saveJsonLink) {
@@ -626,13 +638,15 @@ class YouTubeBatchManager {
         }
       } else if (result.cancelled) {
         this.showStatus(rendererI18n.t('status.fileSelectionCancelled'), 'info');
+        this.hideLoadingOverlay();
       } else {
         this.showStatus(result.message || result.error || rendererI18n.t('status.failedToLoadVideosFromFile'), 'error');
+        this.hideLoadingOverlay();
       }
     } catch (error) {
       console.error('Error:', error);
-      this.hideLoadingOverlay();
       this.showStatus(rendererI18n.t('status.failedToLoadVideosFromFile'), 'error');
+      this.hideLoadingOverlay();
     }
   }
 
@@ -754,7 +768,10 @@ class YouTubeBatchManager {
       return;
     }
 
-    for (const video of videosToAdd) {
+    const renderPromises: Promise<void>[] = [];
+
+    for (let i = 0; i < videosToAdd.length; i++) {
+      const video = videosToAdd[i];
       const thumbnailUrl = await this.getThumbnailDataUrl(video.thumbnail_url.replace('cache://', ''));
       const filename = video.thumbnail_url.replace('cache://', '');
 
@@ -866,21 +883,29 @@ class YouTubeBatchManager {
 
       videoList.insertAdjacentHTML('beforeend', videoHTML);
 
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          const textarea = document.getElementById(`description-${video.id}`) as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.style.height = 'auto';
-            this.autoResizeTextarea(textarea);
-          }
-          this.updateTitleCounter(video.id);
+      const videoRenderPromise = new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            const textarea = document.getElementById(`description-${video.id}`) as HTMLTextAreaElement;
+            if (textarea) {
+              textarea.style.height = 'auto';
+              this.autoResizeTextarea(textarea);
+            }
+            this.updateTitleCounter(video.id);
 
-          if (this.findBarVisible) {
-            this.setupInputEditListenersForVideo(video.id);
-          }
-        }, 10);
+            if (this.findBarVisible) {
+              this.setupInputEditListenersForVideo(video.id);
+            }
+
+            resolve();
+          }, 10);
+        });
       });
+
+      renderPromises.push(videoRenderPromise);
     }
+
+    await Promise.all(renderPromises);
 
     this.state.displayedVideos = this.state.displayedVideos.concat(videosToAdd);
     this.state.currentPage++;
