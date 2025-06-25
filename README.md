@@ -6,8 +6,24 @@
 
 ## [Download](https://github.com/hletrd/yt-batch-manager/releases)
 
-* Download the app from [Releases](https://github.com/hletrd/yt-batch-manager/releases).
-* [Releases](https://github.com/hletrd/yt-batch-manager/releases) 페이지에서 다운로드할 수 있습니다.
+* Download the older versions from [Releases](https://github.com/hletrd/yt-batch-manager/releases).
+* 구 버전은 [Releases](https://github.com/hletrd/yt-batch-manager/releases) 페이지에서 다운로드할 수 있습니다.
+
+### macOS
+
+* [macOS (Intel)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.4-x64.dmg)
+* [macOS (Apple Silicon)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.4-arm64.dmg)
+* [macOS (Universal, Intel + Apple Silicon)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.4-universal.dmg)
+
+### Windows
+
+* [Windows (x86-64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.4-x64.exe)
+* [Windows (arm64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.4-arm64.exe)
+
+### Linux
+
+* [Linux (x86-64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.4-x86_64.AppImage)
+* [Linux (arm64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.4-arm64.AppImage)
 
 ## About
 
