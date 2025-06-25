@@ -813,9 +813,6 @@ class ElectronApp {
         contextIsolation: true,
         preload: path.join(__dirname, 'preload.js'),
         webSecurity: true,
-        enableBlinkFeatures: '',
-        disableBlinkFeatures: 'Autofill,AutofillPreventOverscroll,AutofillShowTypePredictions',
-        additionalArguments: ['--disable-features=AutofillShowTypePredictions'],
       },
       titleBarStyle: 'default',
       show: false,
@@ -832,21 +829,10 @@ class ElectronApp {
 
     this.mainWindow.loadFile(path.join(__dirname, '../src/renderer.html'));
 
-    this.mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-      if (message.includes('Autofill.enable') || message.includes('Autofill.setAddresses')) {
-        event.preventDefault();
-        return;
-      }
-    });
-
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow?.show();
       this.registerLocalShortcuts();
     });
-
-    if (process.argv.includes('--dev')) {
-      this.mainWindow.webContents.openDevTools();
-    }
   }
 
   private getWindowState(): WindowState {
