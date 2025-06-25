@@ -179,7 +179,7 @@
       display: none;
       position: absolute;
       background-color: var(--bg-primary);
-      min-width: 180px;
+      min-width: 240px;
       border: 1px solid var(--border-color);
       border-radius: 8px;
       z-index: 1001;
@@ -187,6 +187,7 @@
       top: 100%;
       margin-top: 8px;
       overflow: hidden;
+      padding: 4px 0px;
     }
 
     .dropdown-content a {
@@ -208,6 +209,11 @@
       pointer-events: none;
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    .dropdown-divider {
+      border-top: 1px solid var(--border-color);
+      margin: 8px 0;
     }
 
     .dropdown.show .dropdown-content {
@@ -956,13 +962,10 @@
           <div class="dropdown">
             <button class="dropdown-btn" onclick="app.toggleFileDropdown()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14,2 14,8 20,8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10,9 9,9 8,9"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
-              <span data-i18n="navigation.openSaveFile">Open / save as a file</span> ▼
+              <span data-i18n="navigation.advanced">Functions</span> ▼
             </button>
             <div class="dropdown-content" id="file-dropdown-content">
               <a href="#" onclick="app.loadFromFile()">
@@ -982,6 +985,24 @@
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
                 <span data-i18n="fileOperations.saveAsJSON">Save as JSON</span>
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="#" onclick="app.removeSavedCredentials()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16,17 21,12 16,7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span data-i18n="buttons.removeSavedCredentials">Remove Saved Credentials</span>
+              </a>
+              <a href="#" onclick="app.deleteCache()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                  <polyline points="3,6 5,6 21,6"/>
+                  <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+                <span data-i18n="buttons.deleteCache">Delete Thumbnail Cache</span>
               </a>
             </div>
           </div>
@@ -1012,11 +1033,6 @@
     <div id="video-list" class="video-list">
       <div class="no-videos">
         <h3 data-i18n="app.noVideosLoaded">No videos loaded</h3>
-        <p data-i18n="app.noVideosLoadedDescription">Click "Load from YouTube" to fetch your videos, or "Load from File" to load a previous backup.</p>
-        <div class="no-videos-actions">
-          <button class="btn btn-secondary" onclick="app.removeSavedCredentials()" data-i18n="buttons.removeSavedCredentials">Remove Saved Credentials</button>
-          <button class="btn btn-secondary" onclick="app.deleteCache()" data-i18n="buttons.deleteCache">Delete Cache</button>
-        </div>
       </div>
     </div>
   </div>
@@ -1045,6 +1061,14 @@
           </svg>
         </button>
       </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loading-text" data-i18n="app.loading">Loading...</div>
+      <div class="loading-subtext" id="loading-subtext">Please wait for a while...</div>
     </div>
   </div>
 
