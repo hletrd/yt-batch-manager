@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, screen } from 'electron';
-import { google } from 'googleapis';
+import { youtube } from '@googleapis/youtube';
 import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
@@ -285,7 +285,7 @@ class YouTubeManager {
         }
       }
 
-      this.youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
+      this.youtube = youtube({ version: 'v3', auth: this.oauth2Client });
       return { success: true };
     } catch (error) {
       console.error(i18n.t('console.authenticationFailed'), error);
