@@ -624,6 +624,9 @@ class ElectronApp {
   }
 
   private setupEventHandlers(): void {
+    app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,AutofillShowTypePredictions');
+    app.commandLine.appendSwitch('disable-blink-features', 'AutofillPreventOverscroll,AutofillShowTypePredictions');
+
     app.whenReady().then(async () => {
       await i18n.initialize();
       this.createWindow();
@@ -721,6 +724,10 @@ class ElectronApp {
         nodeIntegration: false,
         contextIsolation: true,
         preload: path.join(__dirname, 'preload.js'),
+        webSecurity: true,
+        enableBlinkFeatures: '',
+        disableBlinkFeatures: 'Autofill,AutofillPreventOverscroll,AutofillShowTypePredictions',
+        additionalArguments: ['--disable-features=AutofillShowTypePredictions'],
       },
       titleBarStyle: 'default',
       show: false,
