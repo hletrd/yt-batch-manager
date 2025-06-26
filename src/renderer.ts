@@ -1396,6 +1396,19 @@ class YouTubeBatchManager {
       }
     });
 
+    document.addEventListener('focusout', (event) => {
+      setTimeout(() => {
+        const activeElement = document.activeElement;
+        const openDropdowns = document.querySelectorAll('.dropdown.show');
+
+        openDropdowns.forEach(dropdown => {
+          if (!dropdown.contains(activeElement)) {
+            dropdown.classList.remove('show');
+          }
+        });
+      }, 0);
+    });
+
     window.addEventListener('resize', () => {
       const mobileMenu = document.getElementById('mobile-menu');
       const burgerMenu = document.querySelector('.burger-menu');
