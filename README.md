@@ -69,8 +69,9 @@ This is an Electron port, as a standalone app, of [yt-batch-manager-py](https://
 ## 사용방법 (한국어)
 
 * [Releases](https://github.com/hletrd/yt-batch-manager/releases) 페이지에서 앱을 다운로드합니다. macOS (x86_64 / arm64), Windows (x86_64, arm64)를 지원합니다.
-* [Google Cloud Console](https://console.cloud.google.com/)에서 새 프로젝트를 생성합니다. 상단 검색창에 **YouTube Data API v3**를 검색하여 페이지에 들어가고 '사용' 버튼을 클릭해 활성화합니다.
-* 상단 검색창에 **OAuth 동의 화면**을 검색하여 페이지에 들어갑니다. 좌측 메뉴에서 '클라이언트'를 선택합니다. '클라이언트 만들기'를 클릭하고, 애플리케이션 유형을 '데스크톱 앱'으로 설정합니다. 클라이언트를 생성하고 'JSON 다운로드'를 클릭해 키 파일을 다운로드합니다. JSON은 페이지를 닫으면 다시 다운로드할 수 없으니 주의합니다.
+* [Google Cloud Console](https://console.cloud.google.com/)에서 새 프로젝트 아무 이름으로 생성합니다. 상단 검색창에 **YouTube Data API v3**를 검색하여 페이지에 들어가고 '사용' 버튼을 클릭해 활성화합니다.
+* 상단 검색창에 **OAuth 동의 화면**을 검색하여 페이지에 들어갑니다. 이후 '시작하기'를 클릭합니다. 앱 이름은 자유롭게 설정해도 됩니다. 사용자 지원 이메일은 본인의 이메일을 입력합니다. 대상은 '외부'로 설정합니다. 연락처 정보에 본인의 이메일을 입력합니다. 이후 사용자 데이터 정책에 동의하고, '만들기' 버튼을 클릭합니다.
+* 좌측 메뉴에서 '클라이언트'를 선택합니다. '클라이언트 만들기'를 클릭하고, 애플리케이션 유형을 '데스크톱 앱'으로 설정합니다. 클라이언트를 생성하고 'JSON 다운로드'를 클릭해 키 파일을 다운로드합니다. JSON은 페이지를 닫으면 다시 다운로드할 수 없으니 주의합니다.
 * 같은 페이지의 좌측 메뉴에서 '데이터 액세스'를 선택하고, '범위 추가 또는 삭제'를 클릭합니다. '직접 범위 추가'에 다음 내용을 입력하고 '테이블에 추가'를 클릭한 뒤 업데이트합니다.
 ```
 https://www.googleapis.com/auth/youtube
@@ -104,9 +105,11 @@ $ npm install
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project, name it whatever you want.
 3. Search for the **YouTube Data API v3** in the search bar, and enable it.
-4. Search for the **OAuth consent screen** in the search bar, and click 'Clients' on the left sidebar.
-5. Create a new client app as a desktop app, name it whatever you want.
-6. Download the credentials JSON file.
+4. Search for the **OAuth consent screen** in the search bar, and navigate into it.
+5. Click 'Get started'. Fill in the app name as whatever you want and user support email as your email address. Set audience to 'External'. Input your email addreess in 'Contact information'. Agree to the usage policy, and tap 'Create'.
+6. click 'Clients' on the left sidebar.
+7. Create a new client app as a desktop app, name it whatever you want.
+8. Download the credentials JSON file.
 
 ##### Add scopes
 1. Search for the **OAuth consent screen** in the search bar, and click 'Data Access' on the left sidebar.
