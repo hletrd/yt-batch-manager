@@ -149,6 +149,7 @@ class YouTubeManager {
 
       return { success: true, path: credentialsPath };
     } catch (parseError) {
+      console.error('Error parsing credentials:', parseError);
       return {
         success: false,
         error: i18n.t('credentials.credentialsInvalid'),
@@ -243,6 +244,7 @@ class YouTubeManager {
         const credentialsContent = await fs.readFile(credentialsPath, 'utf-8');
         credentials = JSON.parse(credentialsContent);
       } catch (parseError) {
+        console.error('Error parsing credentials:', parseError);
         return {
           success: false,
           error: i18n.t('credentials.credentialsInvalid')
@@ -275,7 +277,8 @@ class YouTubeManager {
           if (!tokenInfo) {
             throw new Error('Invalid token');
           }
-        } catch (error) {
+        } catch (tokenError) {
+          console.log('Token validation failed:', tokenError);
           if (tokens.refresh_token) {
             try {
               const { credentials } = await this.oauth2Client.refreshAccessToken();
@@ -283,6 +286,7 @@ class YouTubeManager {
               this.oauth2Client.setCredentials(tokens);
               await fs.writeFile(getTokenPath(), JSON.stringify(tokens, null, 2));
             } catch (refreshError) {
+              console.error('Token refresh failed:', refreshError);
               tokens = await this.getNewToken();
             }
           } else {
@@ -440,16 +444,36 @@ class YouTubeManager {
     return localThumbnails;
   }
 
+  private async executeWithAuth<T>(apiCall: () => Promise<T>): Promise<T> {
+    try {
+      return await apiCall();
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.code === 401) {
+        console.log('401 error detected, re-authenticating...');
+
+        const authResult = await this.authenticate();
+        if (!authResult.success) {
+          throw new Error(`Re-authentication failed: ${authResult.error}`);
+        }
+
+        return await apiCall();
+      }
+      throw error;
+    }
+  }
+
   async getChannelInfo(): Promise<any> {
     try {
       if (!this.youtube) {
         throw new Error('YouTube API not authenticated');
       }
 
-      const channelsResponse = await this.youtube.channels.list({
-        part: 'snippet,brandingSettings',
-        mine: true,
-      });
+      const channelsResponse = await this.executeWithAuth(() =>
+        this.youtube.channels.list({
+          part: 'snippet,brandingSettings',
+          mine: true,
+        })
+      );
 
       if (!channelsResponse.data.items?.length) {
         return null;
@@ -477,10 +501,12 @@ class YouTubeManager {
       let uploadsPlaylistId: string;
 
       if (!channelId) {
-        const channelsResponse = await this.youtube.channels.list({
-          part: 'contentDetails',
-          mine: true,
-        });
+        const channelsResponse = await this.executeWithAuth(() =>
+          this.youtube.channels.list({
+            part: 'contentDetails',
+            mine: true,
+          })
+        );
 
         if (!channelsResponse.data.items?.length) {
           return [];
@@ -488,10 +514,12 @@ class YouTubeManager {
 
         uploadsPlaylistId = channelsResponse.data.items[0].contentDetails.relatedPlaylists.uploads;
       } else {
-        const channelsResponse = await this.youtube.channels.list({
-          part: 'contentDetails',
-          id: channelId,
-        });
+        const channelsResponse = await this.executeWithAuth(() =>
+          this.youtube.channels.list({
+            part: 'contentDetails',
+            id: channelId,
+          })
+        );
 
         if (!channelsResponse.data.items?.length) {
           return [];
@@ -504,12 +532,14 @@ class YouTubeManager {
       let nextPageToken: string | undefined;
 
       while (playlistItems.length < maxResults) {
-        const playlistResponse = await this.youtube.playlistItems.list({
-          part: 'snippet,status',
-          playlistId: uploadsPlaylistId,
-          maxResults: Math.min(50, maxResults - playlistItems.length),
-          pageToken: nextPageToken,
-        });
+        const playlistResponse = await this.executeWithAuth(() =>
+          this.youtube.playlistItems.list({
+            part: 'snippet,status',
+            playlistId: uploadsPlaylistId,
+            maxResults: Math.min(50, maxResults - playlistItems.length),
+            pageToken: nextPageToken,
+          })
+        );
 
         playlistItems.push(...(playlistResponse.data.items || []));
         nextPageToken = playlistResponse.data.nextPageToken;
@@ -545,10 +575,12 @@ class YouTubeManager {
         const batchIds = videoIds.slice(i, i + 50);
 
         try {
-          const videoDetailsResponse = await this.youtube.videos.list({
-            part: 'snippet,contentDetails,status,statistics,processingDetails',
-            id: batchIds.join(','),
-          });
+          const videoDetailsResponse = await this.executeWithAuth(() =>
+            this.youtube.videos.list({
+              part: 'snippet,contentDetails,status,statistics,processingDetails',
+              id: batchIds.join(','),
+            })
+          );
 
           const videoDetails = videoDetailsResponse.data.items || [];
 
@@ -660,10 +692,12 @@ class YouTubeManager {
         };
       }
 
-      await this.youtube.videos.update({
-        part: parts.join(','),
-        requestBody: requestBody,
-      });
+      await this.executeWithAuth(() =>
+        this.youtube.videos.update({
+          part: parts.join(','),
+          requestBody: requestBody,
+        })
+      );
 
       return true;
     } catch (error) {
@@ -751,11 +785,13 @@ class YouTubeManager {
 
       const locale = app.getLocale().replace('-', '_') || 'en_US';
 
-      const response = await this.youtube.videoCategories.list({
-        part: 'snippet',
-        regionCode: regionCode,
-        hl: locale,
-      });
+      const response = await this.executeWithAuth(() =>
+        this.youtube.videoCategories.list({
+          part: 'snippet',
+          regionCode: regionCode,
+          hl: locale,
+        })
+      );
 
       const categories: Record<string, { id: string; title: string }> = {};
 
@@ -790,10 +826,12 @@ class YouTubeManager {
 
       const locale = app.getLocale().replace('-', '_') || 'en_US';
 
-      const response = await this.youtube.i18nLanguages.list({
-        part: 'snippet',
-        hl: locale,
-      });
+      const response = await this.executeWithAuth(() =>
+        this.youtube.i18nLanguages.list({
+          part: 'snippet',
+          hl: locale,
+        })
+      );
 
       const languages: Record<string, { id: string; name: string }> = {};
 
