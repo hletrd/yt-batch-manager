@@ -468,7 +468,7 @@ class YouTubeManager {
         throw new Error('YouTube API not authenticated');
       }
 
-      const channelsResponse = await this.executeWithAuth(() =>
+      const channelsResponse: any = await this.executeWithAuth(() =>
         this.youtube.channels.list({
           part: 'snippet,brandingSettings',
           mine: true,
@@ -501,7 +501,7 @@ class YouTubeManager {
       let uploadsPlaylistId: string;
 
       if (!channelId) {
-        const channelsResponse = await this.executeWithAuth(() =>
+        const channelsResponse: any = await this.executeWithAuth(() =>
           this.youtube.channels.list({
             part: 'contentDetails',
             mine: true,
@@ -514,7 +514,7 @@ class YouTubeManager {
 
         uploadsPlaylistId = channelsResponse.data.items[0].contentDetails.relatedPlaylists.uploads;
       } else {
-        const channelsResponse = await this.executeWithAuth(() =>
+        const channelsResponse: any = await this.executeWithAuth(() =>
           this.youtube.channels.list({
             part: 'contentDetails',
             id: channelId,
@@ -532,7 +532,7 @@ class YouTubeManager {
       let nextPageToken: string | undefined;
 
       while (playlistItems.length < maxResults) {
-        const playlistResponse = await this.executeWithAuth(() =>
+        const playlistResponse: any = await this.executeWithAuth(() =>
           this.youtube.playlistItems.list({
             part: 'snippet,status',
             playlistId: uploadsPlaylistId,
@@ -575,7 +575,7 @@ class YouTubeManager {
         const batchIds = videoIds.slice(i, i + 50);
 
         try {
-          const videoDetailsResponse = await this.executeWithAuth(() =>
+          const videoDetailsResponse: any = await this.executeWithAuth(() =>
             this.youtube.videos.list({
               part: 'snippet,contentDetails,status,statistics,processingDetails',
               id: batchIds.join(','),
@@ -785,7 +785,7 @@ class YouTubeManager {
 
       const locale = app.getLocale().replace('-', '_') || 'en_US';
 
-      const response = await this.executeWithAuth(() =>
+      const response: any = await this.executeWithAuth(() =>
         this.youtube.videoCategories.list({
           part: 'snippet',
           regionCode: regionCode,
@@ -826,7 +826,7 @@ class YouTubeManager {
 
       const locale = app.getLocale().replace('-', '_') || 'en_US';
 
-      const response = await this.executeWithAuth(() =>
+      const response: any = await this.executeWithAuth(() =>
         this.youtube.i18nLanguages.list({
           part: 'snippet',
           hl: locale,
