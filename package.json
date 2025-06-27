@@ -41,11 +41,11 @@
   "author": "Jiyong Youn",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
-    "@types/node": "^24.0.4",
+    "@types/node": "^24.0.6",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
     "concurrently": "^9.2.0",
-    "electron": "^37.0.0",
+    "electron": "^37.1.0",
     "electron-builder": "^26.0.12",
     "eslint": "^9.29.0",
     "globals": "^16.2.0",
