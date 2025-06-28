@@ -11,19 +11,19 @@
 
 ### macOS
 
-* [macOS (Intel)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.5-x64.dmg)
-* [macOS (Apple Silicon)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.5-arm64.dmg)
-* [macOS (Universal, Intel + Apple Silicon)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.5-universal.dmg)
+* [macOS (Intel)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.7-x64.dmg)
+* [macOS (Apple Silicon)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.7-arm64.dmg)
+* [macOS (Universal, Intel + Apple Silicon)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.7-universal.dmg)
 
 ### Windows
 
-* [Windows (x86-64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.5-x64.exe)
-* [Windows (arm64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.5-arm64.exe)
+* [Windows (x86-64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.7-x64.exe)
+* [Windows (arm64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.7-arm64.exe)
 
 ### Linux
 
-* [Linux (x86-64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.5-x86_64.AppImage)
-* [Linux (arm64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.5-arm64.AppImage)
+* [Linux (x86-64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.7-x86_64.AppImage)
+* [Linux (arm64)](https://github.com/hletrd/yt-batch-manager/releases/latest/download/YT.Batch.Manager-1.0.7-arm64.AppImage)
 
 ## About
 
