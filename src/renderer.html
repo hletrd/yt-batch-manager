@@ -20,6 +20,7 @@
       --accent-warning: #ff6b7a;
       --accent-danger: #ff6b7a;
       --accent-youtube: #ff6b7a;
+      transition: all 0.3s ease;
     }
 
     [data-theme="dark"] {
@@ -49,7 +50,7 @@
       background-color: var(--bg-secondary);
       color: var(--text-primary);
       line-height: 1.6;
-      transition: background-color 0.3s ease, color 0.3s ease;
+      transition: all 0.3s ease;
     }
 
     .header {
@@ -60,6 +61,7 @@
       right: 0;
       z-index: 2000;
       padding: 16px 20px;
+      transition: all 0.3s ease;
     }
 
     .header-content {
@@ -101,6 +103,7 @@
       font-size: 24px;
       font-weight: 700;
       letter-spacing: -0.5px;
+      transition: all 0.3s ease;
     }
 
     .theme-toggle {
@@ -209,7 +212,6 @@
     .dropdown-content a[disabled] {
       pointer-events: none;
       opacity: 0.5;
-      cursor: not-allowed;
     }
 
     .dropdown-divider {
@@ -289,7 +291,6 @@
 
     .btn:disabled {
       opacity: 0.6;
-      cursor: not-allowed;
       transform: none;
     }
 
@@ -338,6 +339,7 @@
       object-fit: cover;
       border-radius: 8px;
       border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
     }
 
     .video-info {
@@ -370,12 +372,14 @@
       margin-bottom: 8px;
       color: var(--text-primary);
       line-height: 1.4;
+      transition: all 0.3s ease;
     }
 
     .video-published {
       font-size: 13px;
       color: var(--text-secondary);
       font-weight: 500;
+      transition: all 0.3s ease;
     }
 
     .video-metadata {
@@ -401,6 +405,7 @@
       color: var(--text-primary);
       font-size: 12px;
       font-weight: 600;
+      transition: all 0.3s ease;
     }
 
     .privacy-select:focus {
@@ -435,6 +440,7 @@
       color: var(--text-primary);
       font-size: 12px;
       font-weight: 600;
+      transition: all 0.3s ease;
     }
 
     .category-select:focus {
@@ -460,6 +466,7 @@
       color: var(--text-primary);
       font-size: 12px;
       font-weight: 600;
+      transition: all 0.3s ease;
     }
 
     .language-select:focus {
@@ -684,6 +691,7 @@
       padding: 16px 20px;
       margin-top: 88px;
       display: none;
+      transition: all 0.3s ease;
     }
 
     .channel-info.show {
@@ -704,6 +712,7 @@
       border-radius: 50%;
       border: 2px solid var(--border-color);
       object-fit: cover;
+      transition: all 0.3s ease;
     }
 
     .channel-details h2 {
@@ -712,6 +721,7 @@
       font-weight: 700;
       color: var(--text-primary);
       line-height: 1.2;
+      transition: all 0.3s ease;
     }
 
     .channel-details p {
@@ -719,6 +729,7 @@
       font-size: 14px;
       color: var(--text-secondary);
       font-weight: 500;
+      transition: all 0.3s ease;
     }
 
     @media (max-width: 1100px) {
@@ -911,7 +922,6 @@
 
     .find-btn:disabled {
       opacity: 0.5;
-      cursor: not-allowed;
     }
 
     .find-close {
