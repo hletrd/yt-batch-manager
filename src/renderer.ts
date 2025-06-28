@@ -1109,8 +1109,6 @@ class YouTubeBatchManager {
       const thumbnailUrl = await this.getThumbnailDataUrl(video.thumbnail_url.replace('cache://', ''));
       const filename = video.thumbnail_url.replace('cache://', '');
 
-      console.log(video);
-
       const videoHTML = `
         <div class="video-item" data-video-id="${video.id}">
           <div class="video-header">
