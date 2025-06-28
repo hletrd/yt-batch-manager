@@ -118,6 +118,7 @@ class YouTubeBatchManager {
   private defaultThumbnail: string = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDMyMCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI0Y4RjlGQSIgc3Ryb2tlPSIjRTlFQ0VGIiBzdHJva2Utd2lkdGg9IjIiIGQ9Ik0wIDBoMzIwdjE4MEgweiIvPjxzdmcgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgNjAgNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeD0iMTMwIiB5PSI2MCI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMzAiIGZpbGw9IiNERUUyRTYiLz48cGF0aCBkPSJNNDUgMzAgMjAgNDVWMTd6IiBmaWxsPSIjNkM3NTdEIi8+PC9zdmc+PC9zdmc+';
   private videoCategories: Record<string, { id: string; title: string }> = {};
   private i18nLanguages: Record<string, { id: string; name: string }> = {};
+  private hasValidCredentials: boolean = false;
 
   private formatDuration(isoDuration?: string): string {
     if (!isoDuration) return '';
@@ -152,6 +153,7 @@ class YouTubeBatchManager {
     this.initializeTheme();
     this.setupEventListeners();
     this.setupFindListeners();
+    this.updateLoadFromYouTubeButton();
     this.initializeApp();
   }
 
@@ -285,6 +287,13 @@ class YouTubeBatchManager {
       }
     } else {
       if (saveAllBtn) saveAllBtn.style.display = 'none';
+    }
+  }
+
+  private updateLoadFromYouTubeButton(): void {
+    const loadBtn = document.getElementById('load-from-youtube-btn') as HTMLButtonElement;
+    if (loadBtn) {
+      loadBtn.disabled = !this.hasValidCredentials;
     }
   }
 
@@ -795,10 +804,15 @@ class YouTubeBatchManager {
     try {
       const authResult = await window.youtubeAPI.authenticate();
       if (!authResult.success) {
+        this.hasValidCredentials = false;
+        this.updateLoadFromYouTubeButton();
         this.showStatus(authResult.error || rendererI18n.t('status.authenticationFailed'), 'error');
         this.hideLoadingOverlay();
         return;
       }
+
+      this.hasValidCredentials = true;
+      this.updateLoadFromYouTubeButton();
 
       await this.loadChannelInfo();
       await this.loadVideoCategories();
@@ -1438,6 +1452,8 @@ class YouTubeBatchManager {
     try {
       const result = await window.youtubeAPI.removeStoredCredentials();
       if (result.success) {
+        this.hasValidCredentials = false;
+        this.updateLoadFromYouTubeButton();
         this.showStatus(rendererI18n.t('credentials.credentialsRemovedSuccessfully'), 'success');
         setTimeout(() => {
           location.reload();
@@ -1497,6 +1513,8 @@ class YouTubeBatchManager {
     try {
       const result = await window.youtubeAPI.selectCredentialsFile();
       if (result.success) {
+        this.hasValidCredentials = true;
+        this.updateLoadFromYouTubeButton();
         this.showStatus(rendererI18n.t('credentials.credentialsSelectedSuccessfully'), 'success');
         setTimeout(() => {
           location.reload();
@@ -1898,6 +1916,9 @@ class YouTubeBatchManager {
       rendererI18n.updatePageTexts();
 
       const credentialsCheck = await window.youtubeAPI.checkCredentials();
+      this.hasValidCredentials = credentialsCheck.success;
+      this.updateLoadFromYouTubeButton();
+
       if (!credentialsCheck.success) {
         this.showCredentialsError(credentialsCheck.error!, credentialsCheck.path);
         return;
@@ -1922,6 +1943,8 @@ class YouTubeBatchManager {
       }
     } catch (error) {
       console.error(rendererI18n.t('errors.errorInitializingApp'), error);
+      this.hasValidCredentials = false;
+      this.updateLoadFromYouTubeButton();
     }
   }
 }
