@@ -202,6 +202,13 @@ class YouTubeManager {
         await fs.unlink(tokenPath);
       }
 
+      this.oauth2Client.setCredentials({});
+      this.youtube = null;
+      this.videos = [];
+      this.thumbnailUrls = {};
+      this.videoCategories = {};
+      this.i18nLanguages = {};
+
       return { success: true };
     } catch (error) {
       return {
