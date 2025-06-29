@@ -157,12 +157,25 @@ class YouTubeBatchManager {
     this.initializeApp();
   }
 
-  private initializeTheme(): void {
+    private initializeTheme(): void {
     const savedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
-    this.updateThemeIcon(theme);
+
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      this.updateThemeIcon(savedTheme);
+    } else {
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const effectiveTheme = systemPrefersDark ? 'dark' : 'light';
+      this.updateThemeIcon(effectiveTheme);
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      const savedTheme = localStorage.getItem('theme');
+      if (!savedTheme) {
+        const effectiveTheme = e.matches ? 'dark' : 'light';
+        this.updateThemeIcon(effectiveTheme);
+      }
+    });
   }
 
   private updateThemeIcon(theme: string): void {
@@ -183,8 +196,17 @@ class YouTubeBatchManager {
   }
 
   toggleTheme(): void {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    const currentDataTheme = document.documentElement.getAttribute('data-theme');
+    let currentEffectiveTheme: string;
+
+    if (currentDataTheme) {
+      currentEffectiveTheme = currentDataTheme;
+    } else {
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      currentEffectiveTheme = systemPrefersDark ? 'dark' : 'light';
+    }
+
+    const newTheme = currentEffectiveTheme === 'dark' ? 'light' : 'dark';
     this.setTheme(newTheme);
   }
 
