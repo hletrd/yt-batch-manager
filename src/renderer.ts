@@ -1241,7 +1241,7 @@ class YouTubeBatchManager {
           </div>
 
           <div class="form-group">
-            <label for="tags-${video.id}">${rendererI18n.t('form.tags')}</label>
+            <label for="tags-container-${video.id}">${rendererI18n.t('form.tags')}</label>
             <div class="tags-counter" id="tags-counter-${video.id}">${(video.tags || []).length}/500</div>
             <div class="tags-container" id="tags-container-${video.id}" onclick="app.focusTagInput('${video.id}')">
               ${(video.tags || []).map(tag => `
